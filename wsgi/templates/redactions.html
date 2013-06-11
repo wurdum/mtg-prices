@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+    <p>
+        <a class="btn btn-info pull-right" href="{{ url_for('redactions_update') }}">Update</a>
+        <span class="clearfix"></span>
+    </p>
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th class="span5">name</th>
+                <th>synonyms</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for reda in redas %}
+            <tr>
+                <td class="text-middle"><a href="{{ reda.url }}"><strong>{{ reda.name }}</strong></a></td>
+                <td class="text-middle">{{ reda.synonyms|join(', ') }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
