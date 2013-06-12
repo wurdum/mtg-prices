@@ -17,6 +17,18 @@ def resolve_cards_async(content):
     return [card for card in pool.imap(MagiccardsScraper.resolve_card, content)]
 
 
+def get_redactions():
+    """Parses redactions using magiccards, spellshop, buymagic
+
+    :return: list of models.Redaction
+    """
+    redas = MagiccardsScraper.get_redas()
+    redas = SpellShopScraper.update_redas(redas)
+    redas = BuyMagicScraper.update_redas(redas)
+
+    return redas
+
+
 class MagiccardsScraper(object):
     """
     Parses cards info using www.magiccards.info resource
@@ -41,36 +53,38 @@ class MagiccardsScraper(object):
         scrapper = MagiccardsScraper(name, redaction)
         return scrapper.get_card()
 
-    def get_card(self):
+    @staticmethod
+    def get_card(name, redaction):
         """Parses card info, if no info returns card object without info and prices
 
         :return: models.Card object
         """
-        page_url = self.MAGICCARDS_BASE_URL + self.MAGICCARDS_QUERY_TMPL % urllib2.quote(self.name)
+        page_url = MagiccardsScraper.MAGICCARDS_BASE_URL + MagiccardsScraper.MAGICCARDS_QUERY_TMPL % urllib2.quote(name)
 
         try:
             page = urllib2.urlopen(page_url).read()
             soup = BeautifulSoup(page, from_encoding='utf-8')
 
-            if not self._is_card_page(soup):
-                hint = self._try_get_hint(soup)
+            if not MagiccardsScraper._is_card_page(soup):
+                hint = MagiccardsScraper._try_get_hint(soup)
                 if hint is not None:
                     page_url = ext.url_join(ext.get_domain(page_url), hint['href'])
-                    self.name = hint.text
+                    name = hint.text
                     page = urllib2.urlopen(page_url).read()
                     soup = BeautifulSoup(page, from_encoding='utf-8')
 
-            info = self._get_card_info(soup)
-            price = self._get_prices(soup)
+            info = MagiccardsScraper._get_card_info(soup)
+            price = MagiccardsScraper._get_prices(soup)
 
             card_info = models.CardInfo(**info)
             card_prices = models.CardPrices(**price)
         except:
-            return models.Card(self.name, self.redaction)
+            return models.Card(name, redaction)
         else:
-            return models.Card(self.name, self.redaction, info=card_info, prices=card_prices)
+            return models.Card(name, redaction, info=card_info, prices=card_prices)
 
-    def _is_card_page(self, soup):
+    @staticmethod
+    def _is_card_page(soup):
         """Parses soup page and find out is page has card info
 
         :param soup: soup page from www.magiccards.info
@@ -78,7 +92,8 @@ class MagiccardsScraper(object):
         """
         return len(soup.find_all('table')) > 2
 
-    def _try_get_hint(self, soup):
+    @staticmethod
+    def _try_get_hint(soup):
         """Parses soup page and tries find out card hint
 
         :param soup: soup page from www.magiccards.info
@@ -87,34 +102,20 @@ class MagiccardsScraper(object):
         hints_list = soup.find_all('li')
         return hints_list[0].contents[0] if hints_list else None
 
-    def _get_card_info(self, soup):
+    @staticmethod
+    def _get_card_info(soup):
         """Parses soup page and returns dict with card info
 
         :param soup: soup page from www.magiccards.info
         :return: dictionary with card info
         """
         content_table = soup.find_all('table')[3]
-        return {'url': self._get_url(content_table),
-                'img_url': self._get_img_url(content_table),
-                'description': self._get_description(content_table)}
+        return {'url': ext.url_join(MagiccardsScraper.MAGICCARDS_BASE_URL, content_table.find_all('a')[0]['href']),
+                'img_url': content_table.find_all('img')[0]['src'],
+                'description': MagiccardsScraper._get_description(content_table)}
 
-    def _get_url(self, table):
-        """Parses info table
-
-        :param table: info table at www.magiccards.info
-        :return: url of the page with card
-        """
-        return ext.url_join(MagiccardsScraper.MAGICCARDS_BASE_URL, table.find_all('a')[0]['href'])
-
-    def _get_img_url(self, table):
-        """Parses info table
-
-        :param table: info table at www.magiccards.info
-        :return: url of the card image
-        """
-        return table.find_all('img')[0]['src']
-
-    def _get_description(self, table):
+    @staticmethod
+    def _get_description(table):
         """Parses info table
 
         :param table: info table at www.magiccards.info
@@ -124,7 +125,8 @@ class MagiccardsScraper(object):
         clean_descr = dirty_descr.replace('<b>', '').replace('</b>', '').replace('</br>', '').split('<br><br>')
         return clean_descr
 
-    def _get_prices(self, magic_soup):
+    @staticmethod
+    def _get_prices(magic_soup):
         """Parses prices by TCGPlayer card sid
 
         :param magic_soup: soup page from www.magiccards.info
@@ -138,24 +140,27 @@ class MagiccardsScraper(object):
 
         return tcg_scrapper.get_brief_info()
 
-    def get_en_redas(self):
-        url = ext.url_join(self.MAGICCARDS_BASE_URL, self.MAGICCARDS_REDACTIONS_URL)
+    @staticmethod
+    def get_redas():
+        url = ext.url_join(MagiccardsScraper.MAGICCARDS_BASE_URL, MagiccardsScraper.MAGICCARDS_REDACTIONS_URL)
         page = urllib2.urlopen(url).read()
         soup = BeautifulSoup(page)
 
         en_reda_table = soup.find_all('table')[1]
         redas = []
-        redas_synonyms = self._get_redas_synonyms()
+        redas_synonyms = MagiccardsScraper._get_redas_synonyms()
         for reda_a in en_reda_table.find_all('a'):
             name = reda_a.text.strip().lower()
-            url = ext.url_join(self.MAGICCARDS_BASE_URL, reda_a['href'])
+            url = ext.url_join(MagiccardsScraper.MAGICCARDS_BASE_URL, reda_a['href'])
             reda_synonyms = redas_synonyms.get(name, [])
 
             redas.append(models.Redaction(name, url, reda_synonyms))
 
         return redas
 
-    def _get_redas_synonyms(self):
+    @staticmethod
+    def _get_redas_synonyms():
+        encoding = 'utf-8'
         synonyms = {}
         with open('redactions', 'r') as rfile:
             reader = csv.DictReader(rfile, delimiter=';')
@@ -164,7 +169,7 @@ class MagiccardsScraper(object):
                 spellshop = line['spellshop'].strip().lower()
                 buymagic = line['buymagic'].strip().lower()
 
-                synonyms[key] = [spellshop, buymagic]
+                synonyms[unicode(key, encoding)] = [unicode(spellshop, encoding), unicode(buymagic, encoding)]
 
         return synonyms
 
@@ -217,20 +222,80 @@ class TCGPlayerScraper(object):
 
 
 class SpellShopScraper(object):
+    """
+    Represents parser for www.spellshop.com.ua
+    """
 
     BASE_URL = 'http://spellshop.com.ua/index.php?categoryID=90'
 
-    def get_redactions(self):
-        page = urllib2.urlopen(self.BASE_URL).read()
+    @staticmethod
+    def update_redas(redas):
+        """Parses www.spellshop.com.ua and adds shop info to redactions
+
+        :param redas: list of models.Redaction
+        :returns: list of updated models.Redaction
+        """
+        page = urllib2.urlopen(SpellShopScraper.BASE_URL).read()
         soup = BeautifulSoup(page)
 
         menu_list = soup.find_all('td', class_='menu_body')[1]
         redactions_container = menu_list.find('table').contents[1].contents[0]
         redaction_divs = redactions_container.find_all('div')[3:37]
 
-        redactions = []
         for rdiv in redaction_divs:
-            redaction = rdiv.find('a').text.strip().lower()
-            redactions.append(redaction)
+            reda_tag = rdiv.find('a')
+            name = reda_tag.text.strip().lower()
+            url = ext.url_join(ext.get_domain(SpellShopScraper.BASE_URL), reda_tag['href'])
 
-        return redactions
+            reda = ext.get_first(redas, lambda r: name in r.names)
+            if reda is None:
+                raise Exception('unknown redaction is found: ' + name)
+
+            reda.shops['spellshop'] = url
+
+        return redas
+
+    @staticmethod
+    def get_cards(reda):
+        page = urllib2.urlopen(ext.url_join(reda.shops['spellshop'], '&show_all=yes')).read()
+        soup = BeautifulSoup(page)
+
+
+
+        return []
+
+
+class BuyMagicScraper(object):
+    """
+    Represents parser for www.buymagic.ua
+    """
+
+    BASE_URL = 'http://www.buymagic.com.ua/'
+
+    @staticmethod
+    def update_redas(redas):
+        """Parses www.buymagic.com.ua and adds shop info to redactions
+
+        :param redas: list of models.Redaction
+        :returns: list of updated models.Redaction
+        """
+        page = urllib2.urlopen(BuyMagicScraper.BASE_URL).read()
+        page = page\
+            .replace('"bordercolor="#000000" bgcolor="#FFFFFF"', '')\
+            .replace('<link rel="stylesheet" href="/jquery.fancybox-1.3.0.css" type="text/css" media="screen">', '')\
+            .replace('"title=', '" title=')
+        soup = BeautifulSoup(page, from_encoding='utf-8')
+
+        root_div = soup.find_all('div', class_='c1')[1]
+        for reda_ul in root_div.find_all('ul')[1:]:
+            for reda_tag in reda_ul.find_all('a'):
+                name = reda_tag.text.strip().lower()
+                url = reda_tag['href']
+
+                reda = ext.get_first(redas, lambda r: name in r.names)
+                if reda is None:
+                    raise Exception('unknown redaction is found: ' + name)
+
+                reda.shops['buymagic'] = url
+
+        return redas

@@ -10,20 +10,6 @@ def index():
     return render_template('base.html')
 
 
-@app.route('/ss/0', defaults={'start': 0}, methods=['GET'])
-@app.route('/ss/<skip>', methods=['GET'])
-def spellshop(skip):
-    cards = db.get_shop_cards('spellshop', skip=skip, limit=50)
-    return render_template('spellshop.html', cards=cards)
-
-
-@app.route('/ss/update')
-def spellshop_update():
-    ss_scraper = scrapers.SpellShopScraper()
-    redactions = ss_scraper.get_redactions()
-    return redirect(url_for('spellshop'))
-
-
 @app.route('/redactions')
 def redactions():
     return render_template('redactions.html', redas=sorted(db.get_redas(), key=lambda r: r.name))
@@ -31,10 +17,18 @@ def redactions():
 
 @app.route('/redactions/update')
 def redactions_update():
-    redas = scrapers.MagiccardsScraper().get_en_redas()
-    db.update_redas(redas)
+    redas = scrapers.get_redactions()
+    db.save_redas(redas)
 
     return redirect(url_for('redactions'))
 
+
+@app.route('/spellshop/')
+def spellshop():
+    redas = db.get_redas()
+    for reda in redas:
+        cards = scrapers.SpellShopScraper.get_cards(reda)
+
+
 if __name__ == "__main__":
-    app.run(debug = "True")
+    app.run(debug="True")

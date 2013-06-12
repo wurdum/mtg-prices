@@ -25,7 +25,10 @@ def get_shop_cards(shop, skip=0, limit=50):
         pass
 
 
-def update_redas(redas):
+def save_redas(redas):
+    """
+    Removes old and saves new redactions list to db
+    """
     connection = pymongo.MongoClient(MONGO_URL)
     db = connection[DB]
 
@@ -35,16 +38,13 @@ def update_redas(redas):
 
 
 def get_redas():
+    """
+    Loads redactions list from db
+    """
     connection = pymongo.MongoClient(MONGO_URL)
     db = connection[DB]
 
-    redas = []
-    for reda_dict in db.redas.find():
-        reda = toreda(reda_dict)
-
-        redas.append(reda)
-
-    return redas
+    return [toreda(reda_dict) for reda_dict in db.redas.find()]
 
 
 def tocard(dict_card):
@@ -57,7 +57,7 @@ def tocard(dict_card):
 
 
 def toreda(dict_reda):
-    return models.Redaction(dict_reda['name'], dict_reda['url'], synonyms=dict_reda['synonyms'])
+    return models.Redaction(dict_reda['name'], dict_reda['url'], dict_reda['synonyms'], shops=dict_reda['shops'])
 
 
 def todict(obj, classkey=None):

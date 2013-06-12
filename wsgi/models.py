@@ -69,10 +69,17 @@ class Shop(object):
 
 class Redaction(object):
 
-    def __init__(self, name, url, synonyms):
+    def __init__(self, name, url, synonyms, shops=None):
         self.name = name
         self.url = url
         self.synonyms = synonyms
+        self.shops = {} if not shops else shops
+
+    @property
+    def names(self):
+        names = list(self.synonyms)
+        names.insert(0, self.name)
+        return names
 
     def __repr__(self):
         return '%s [%s]' % (self.name, ', '.join(self.synonyms))

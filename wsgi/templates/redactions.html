@@ -8,13 +8,27 @@
         <thead>
             <tr>
                 <th class="span5">name</th>
+                <th class="span1">spellshop</th>
+                <th class="span1">buymagic</th>
                 <th>synonyms</th>
             </tr>
         </thead>
         <tbody>
         {% for reda in redas %}
             <tr>
-                <td class="text-middle"><a href="{{ reda.url }}"><strong>{{ reda.name }}</strong></a></td>
+                <td class="text-middle">
+                    <a href="{{ reda.url }}"><strong>{{ reda.name }}</strong></a>
+                </td>
+                <td class="text-center text-middle">
+                    {% if 'spellshop' in reda.shops %}
+                        <a href="{{ reda.shops['spellshop'] }}">link</a>
+                    {% endif %}
+                </td>
+                <td class="text-center text-middle">
+                    {% if 'buymagic' in reda.shops %}
+                        <a href="{{ reda.shops['buymagic'] }}">link</a>
+                    {% endif %}
+                </td>
                 <td class="text-middle">{{ reda.synonyms|join(', ') }}</td>
             </tr>
         {% endfor %}
