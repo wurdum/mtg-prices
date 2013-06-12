@@ -28,7 +28,9 @@ def redactions_update():
 
 @app.route('/spellshop')
 def spellshop():
-    return render_template('spellshop.html', cards=db.get_cards())
+    redas = filter(lambda r: scrapers.SpellShopScraper.SHOP_NAME in r.shops, db.get_redas())
+    cards = db.get_cards()
+    return render_template('spellshop.html', cards=cards, redas=redas)
 
 
 @app.route('/spellshop/update')

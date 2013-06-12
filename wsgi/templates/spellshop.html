@@ -1,42 +1,40 @@
-{% extends 'base.html' %}
-{% block content %}
-    <p>
-        <a class="btn btn-info pull-right" href="{{ url_for('spellshop_update') }}">Update</a>
-        <span class="clearfix"></span>
-    </p>
-    <table class="table table-bordered table-striped">
-        <thead>
-        <tr>
-            <th rowspan="2">name</th>
-            <th rowspan="2">type</th>
-            <th rowspan="2">redaction</th>
-            <th colspan="4">tcg</th>
-            <th colspan="2">spellshop</th>
-        </tr>
-        <tr>
-            <th>url</th>
-            <th>low</th>
-            <th>mid</th>
-            <th>high</th>
-            <th>url</th>
-            <th>price</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for card in cards %}
+{% extends 'cards_base.html' %}
+{% block cards_table %}
+    <div class="cards-table pull-right">
+        <table class="table table-bordered table-striped">
+            <thead>
             <tr>
-                {% set spellshop = card.shops|shops('spellshop')|first %}
-                <td class="text-middle"><strong><a href="{{ card.info.url }}">{{ card.name }}</a></strong></td>
-                <td class="text-center text-middle">{{ card.type }}</td>
-                <td class="text-center text-middle">{{ card.redaction }}</td>
-                <td class="text-center text-middle"><a href="{{ card.prices.url }}">link</a></td>
-                <td class="text-center text-middle">${{ '%0.2f'|format(card|price('low')) }}</td>
-                <td class="text-center text-middle">${{ '%0.2f'|format(card|price('mid')) }}</td>
-                <td class="text-center text-middle">${{ '%0.2f'|format(card|price('high')) }}</td>
-                <td class="text-center text-middle"><a href="{{ spellshop.url }}">link</a></td>
-                <td class="text-center text-middle">{{ spellshop.price }}</td>
+                <th rowspan="2">name</th>
+                <th rowspan="2">type</th>
+                <th rowspan="2">redaction</th>
+                <th colspan="4">tcg</th>
+                <th colspan="2">spellshop</th>
             </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+            <tr>
+                <th>url</th>
+                <th>low</th>
+                <th>mid</th>
+                <th>high</th>
+                <th>url</th>
+                <th>price</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for card in cards %}
+                <tr>
+                    {% set spellshop = card.shops|shops('spellshop')|first %}
+                    <td class="text-middle"><strong><a href="{{ card.info.url }}">{{ card.name }}</a></strong></td>
+                    <td class="text-center text-middle">{{ card.type }}</td>
+                    <td class="text-center text-middle">{{ card.redaction }}</td>
+                    <td class="text-center text-middle"><a href="{{ card.prices.url }}">link</a></td>
+                    <td class="text-center text-middle">${{ '%0.2f'|format(card|price('low')) }}</td>
+                    <td class="text-center text-middle">${{ '%0.2f'|format(card|price('mid')) }}</td>
+                    <td class="text-center text-middle">${{ '%0.2f'|format(card|price('high')) }}</td>
+                    <td class="text-center text-middle"><a href="{{ spellshop.url }}">link</a></td>
+                    <td class="text-center text-middle">{{ spellshop.price }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% endblock %}
