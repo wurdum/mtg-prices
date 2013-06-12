@@ -111,19 +111,7 @@ class MagiccardsScraper(object):
         """
         content_table = soup.find_all('table')[3]
         return {'url': ext.url_join(MagiccardsScraper.MAGICCARDS_BASE_URL, content_table.find_all('a')[0]['href']),
-                'img_url': content_table.find_all('img')[0]['src'],
-                'description': MagiccardsScraper._get_description(content_table)}
-
-    @staticmethod
-    def _get_description(table):
-        """Parses info table
-
-        :param table: info table at www.magiccards.info
-        :return: list of paragraphs of card's description
-        """
-        dirty_descr = str(table.find_all('p', class_='ctext')[0].contents[0])
-        clean_descr = dirty_descr.replace('<b>', '').replace('</b>', '').replace('</br>', '').split('<br><br>')
-        return clean_descr
+                'img_url': content_table.find_all('img')[0]['src']}
 
     @staticmethod
     def _get_prices(magic_soup):
@@ -257,30 +245,46 @@ class SpellShopScraper(object):
         return redas
 
     @staticmethod
-    def get_cards(reda, cards):
+    def get_cards(reda):
+        """Parses www.spellshop.com.ua to find all available card for reda redaction
+
+        :param reda: cards redaction, object of models.Redaction
+        :return: list of models.Card
+        """
         url = reda.shops[SpellShopScraper.SHOP_NAME] + '&show_all=yes'
         page = urllib2.urlopen(url).read()
         soup = BeautifulSoup(page)
 
         cards_table = soup.find('td', class_='td_center')
+        cards = []
         if cards_table is not None:
-            for card_div in cards_table.find_all('div'):
-                card_tr = card_div.find('tr')
-                card_tds = card_tr.find_all('td')
-
-                name = card_tds[1].find('a').text.strip().lower()
-                url = ext.url_join(ext.get_domain(SpellShopScraper.BASE_URL), card_tds[1].find('a')['href'])
-                price = ext.uah_to_dollar(card_tds[4].text)
-                number = len(card_tds[5].find_all('option'))
-
-                card = ext.get_first(cards, lambda c: (c.name, c.redaction) == (name, reda.name))
-                if card is None:
-                    card = MagiccardsScraper.get_card(name, reda.name)
-                    cards.append(card)
-
-                card.shops.append(models.Shop(SpellShopScraper.SHOP_NAME, url, price, number))
+            cards_divs = cards_table.find_all('div')
+            pool = eventlet.GreenPool(len(cards_divs))
+            for card in pool.imap(SpellShopScraper._parse_card_shop_info, map(lambda cd: (cd, reda), cards_divs)):
+                cards.append(card)
 
         return cards
+
+    @staticmethod
+    def _parse_card_shop_info(args):
+        """Parses card shop info and find this card at www.magiccard.info
+
+        :param args: tuple of (soup tag with card info, models.Redaction)
+        :return: models.Card
+        """
+        card_div, reda = args
+        card_tr = card_div.find('tr')
+        card_tds = card_tr.find_all('td')
+
+        name = card_tds[1].find('a').text.strip().lower()
+        url = ext.url_join(ext.get_domain(SpellShopScraper.BASE_URL), card_tds[1].find('a')['href'])
+        price = ext.uah_to_dollar(card_tds[4].text)
+        number = len(card_tds[5].find_all('option'))
+
+        card = MagiccardsScraper.get_card(name, reda.name)
+        card.shops.append(models.Shop(SpellShopScraper.SHOP_NAME, url, price, number))
+
+        return card
 
 
 class BuyMagicScraper(object):
@@ -298,9 +302,9 @@ class BuyMagicScraper(object):
         :returns: list of updated models.Redaction
         """
         page = urllib2.urlopen(BuyMagicScraper.BASE_URL).read()
-        page = page\
-            .replace('"bordercolor="#000000" bgcolor="#FFFFFF"', '')\
-            .replace('<link rel="stylesheet" href="/jquery.fancybox-1.3.0.css" type="text/css" media="screen">', '')\
+        page = page \
+            .replace('"bordercolor="#000000" bgcolor="#FFFFFF"', '') \
+            .replace('<link rel="stylesheet" href="/jquery.fancybox-1.3.0.css" type="text/css" media="screen">', '') \
             .replace('"title=', '" title=')
         soup = BeautifulSoup(page, from_encoding='utf-8')
 

@@ -33,10 +33,9 @@ class CardInfo(object):
     Card info from www.magiccards.com
     """
 
-    def __init__(self, url, img_url, description):
+    def __init__(self, url, img_url):
         self.url = url
         self.img_url = img_url
-        self.description = description
 
     def __repr__(self):
         return self.url
