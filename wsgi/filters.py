@@ -68,9 +68,17 @@ def idfy(value):
     return result
 
 
+def shops(shops, shop_name):
+    """
+    Filters shops list
+    """
+    return filter(lambda f: f.name == shop_name, shops)
+
+
 def register(app):
     app.add_template_filter(idfy)
     app.add_template_filter(active_if)
     app.add_template_filter(get_new_order)
     app.add_template_filter(price)
     app.add_template_filter(price_float)
+    app.add_template_filter(shops)

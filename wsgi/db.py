@@ -13,16 +13,19 @@ def save_cards(cards):
     connection = pymongo.MongoClient(MONGO_URL)
     db = connection[DB]
 
+    db.cards.remove()
     for c in cards:
         db.cards.insert(todict(c))
 
 
-def get_shop_cards(shop, skip=0, limit=50):
+def get_cards():
+    """
+    Returns all cards from db as list of models.Card
+    """
     connection = pymongo.MongoClient(MONGO_URL)
     db = connection[DB]
 
-    for card_dict in db.cards.find().sort('$natural', -1).skip(skip).limit(limit):
-        pass
+    return [tocard(card_dict) for card_dict in db.cards.find()]
 
 
 def save_redas(redas):
@@ -53,7 +56,8 @@ def tocard(dict_card):
     """
     info = models.CardInfo(**dict_card['info']) if 'info' in dict_card and dict_card['info'] else None
     prices = models.CardPrices(**dict_card['prices']) if 'prices' in dict_card and dict_card['prices'] else None
-    return models.Card(dict_card['name'], dict_card['number'], info=info, prices=prices)
+    shops = [models.Shop(**shop_dict) for shop_dict in dict_card['shops']]
+    return models.Card(dict_card['name'], dict_card['redaction'], info=info, prices=prices, shops=shops)
 
 
 def toreda(dict_reda):

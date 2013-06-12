@@ -3,12 +3,12 @@ class Card(object):
     Card model with info and prices
     """
 
-    def __init__(self, name, redaction, info=None, prices=None):
+    def __init__(self, name, redaction, info=None, prices=None, shops=None):
         self.name = name
         self.redaction = redaction
         self.prices = prices
         self.info = info
-        self.shops = []
+        self.shops = shops if shops else []
 
     @property
     def has_info(self):
@@ -68,6 +68,9 @@ class Shop(object):
         self.price = price
         self.number = number
         self.type = type
+
+    def __repr__(self):
+        return '%s %s %s' % (self.name, self.type, self.url)
 
 
 class Redaction(object):
