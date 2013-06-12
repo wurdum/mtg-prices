@@ -25,7 +25,7 @@ class Card(object):
         return (self.name, self.redaction) == (other.name, other.redaction)
 
     def __repr__(self):
-        return '%s x %d' % (self.name, self.redaction)
+        return '%s x %s' % (self.name, self.redaction)
 
 
 class CardInfo(object):
@@ -59,15 +59,22 @@ class CardPrices(object):
 
 
 class Shop(object):
+    """
+    Represents shop offer for some card
+    """
 
-    def __init__(self, name, price, number, **kwargs):
+    def __init__(self, name, url, price, number, type='common'):
         self.name = name
+        self.url = url
         self.price = price
         self.number = number
-        self.__dict__.update(kwargs)
+        self.type = type
 
 
 class Redaction(object):
+    """
+    Represents card redaction
+    """
 
     def __init__(self, name, url, synonyms, shops=None):
         self.name = name

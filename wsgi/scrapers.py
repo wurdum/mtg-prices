@@ -79,9 +79,9 @@ class MagiccardsScraper(object):
             card_info = models.CardInfo(**info)
             card_prices = models.CardPrices(**price)
         except:
-            return models.Card(name, redaction)
+            raise Exception('card %s %s was not found' % (name, redaction))
         else:
-            return models.Card(name, redaction, info=card_info, prices=card_prices)
+            return models.Card(name.strip().lower(), redaction.strip().lower(), info=card_info, prices=card_prices)
 
     @staticmethod
     def _is_card_page(soup):
@@ -227,6 +227,7 @@ class SpellShopScraper(object):
     """
 
     BASE_URL = 'http://spellshop.com.ua/index.php?categoryID=90'
+    SHOP_NAME = 'spellshop'
 
     @staticmethod
     def update_redas(redas):
@@ -251,18 +252,35 @@ class SpellShopScraper(object):
             if reda is None:
                 raise Exception('unknown redaction is found: ' + name)
 
-            reda.shops['spellshop'] = url
+            reda.shops[SpellShopScraper.SHOP_NAME] = url
 
         return redas
 
     @staticmethod
-    def get_cards(reda):
-        page = urllib2.urlopen(ext.url_join(reda.shops['spellshop'], '&show_all=yes')).read()
+    def get_cards(reda, cards):
+        url = reda.shops[SpellShopScraper.SHOP_NAME] + '&show_all=yes'
+        page = urllib2.urlopen(url).read()
         soup = BeautifulSoup(page)
 
+        cards_table = soup.find('td', class_='td_center')
+        if cards_table is not None:
+            for card_div in cards_table.find_all('div'):
+                card_tr = card_div.find('tr')
+                card_tds = card_tr.find_all('td')
 
+                name = card_tds[1].find('a').text.strip().lower()
+                url = ext.url_join(ext.get_domain(SpellShopScraper.BASE_URL), card_tds[1].find('a')['href'])
+                price = ext.uah_to_dollar(card_tds[4].text)
+                number = len(card_tds[5].find_all('option'))
 
-        return []
+                card = ext.get_first(cards, lambda c: (c.name, c.redaction) == (name, reda.name))
+                if card is None:
+                    card = MagiccardsScraper.get_card(name, reda.name)
+                    cards.append(card)
+
+                card.shops.append(models.Shop(SpellShopScraper.SHOP_NAME, url, price, number))
+
+        return cards
 
 
 class BuyMagicScraper(object):
