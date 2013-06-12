@@ -52,15 +52,19 @@ def get_redas():
 
 def tocard(dict_card):
     """
-    Converts dict to card
+    Converts dict to models.Card
     """
     info = models.CardInfo(**dict_card['info']) if 'info' in dict_card and dict_card['info'] else None
     prices = models.CardPrices(**dict_card['prices']) if 'prices' in dict_card and dict_card['prices'] else None
     shops = [models.Shop(**shop_dict) for shop_dict in dict_card['shops']]
-    return models.Card(dict_card['name'], dict_card['redaction'], info=info, prices=prices, shops=shops)
+    return models.Card(dict_card['name'], dict_card['redaction'], dict_card['type'],
+                       info=info, prices=prices, shops=shops)
 
 
 def toreda(dict_reda):
+    """
+    Converts dict to models.Redaction
+    """
     return models.Redaction(dict_reda['name'], dict_reda['url'], dict_reda['synonyms'], shops=dict_reda['shops'])
 
 

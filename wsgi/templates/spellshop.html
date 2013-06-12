@@ -8,6 +8,7 @@
         <thead>
         <tr>
             <th rowspan="2">name</th>
+            <th rowspan="2">type</th>
             <th rowspan="2">redaction</th>
             <th colspan="4">tcg</th>
             <th colspan="2">spellshop</th>
@@ -26,6 +27,7 @@
             <tr>
                 {% set spellshop = card.shops|shops('spellshop')|first %}
                 <td class="text-middle"><strong><a href="{{ card.info.url }}">{{ card.name }}</a></strong></td>
+                <td class="text-center text-middle">{{ card.type }}</td>
                 <td class="text-center text-middle">{{ card.redaction }}</td>
                 <td class="text-center text-middle"><a href="{{ card.prices.url }}">link</a></td>
                 <td class="text-center text-middle">${{ '%0.2f'|format(card|price('low')) }}</td>

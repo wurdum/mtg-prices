@@ -3,9 +3,10 @@ class Card(object):
     Card model with info and prices
     """
 
-    def __init__(self, name, redaction, info=None, prices=None, shops=None):
+    def __init__(self, name, redaction, type, info=None, prices=None, shops=None):
         self.name = name
         self.redaction = redaction
+        self.type = type
         self.prices = prices
         self.info = info
         self.shops = shops if shops else []

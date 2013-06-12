@@ -59,6 +59,7 @@ class MagiccardsScraper(object):
 
             soup = MagiccardsScraper._select_reda(name, redaction, soup)
 
+            type = MagiccardsScraper._get_card_type(soup)
             info = MagiccardsScraper._get_card_info(soup)
             price = MagiccardsScraper._get_prices(soup)
 
@@ -67,7 +68,7 @@ class MagiccardsScraper(object):
         except:
             raise Exception('card %s %s was not found' % (name, redaction))
         else:
-            return models.Card(name.strip().lower(), redaction.strip().lower(), info=card_info, prices=card_prices)
+            return models.Card(uni(name), uni(redaction), type, info=card_info, prices=card_prices)
 
     @staticmethod
     def _select_reda(name, reda, soup):
@@ -110,6 +111,15 @@ class MagiccardsScraper(object):
         """
         hints_list = soup.find_all('li')
         return hints_list[0].contents[0] if hints_list else None
+
+    @staticmethod
+    def _get_card_type(soup):
+        """Parses soup page and returns card type (rare, common, etc.)
+
+        :param soup: soup page from www.magiccards.info
+        :return: card type as string
+        """
+        return uni(soup.find_all('table')[3].find_all('td')[2].find_all('b')[3].text.split('(')[1][:-1])
 
     @staticmethod
     def _get_card_info(soup):
