@@ -73,6 +73,8 @@ class MagiccardsScraper(object):
                     page = urllib2.urlopen(page_url).read()
                     soup = BeautifulSoup(page, from_encoding='utf-8')
 
+            soup = MagiccardsScraper._select_reda(name, redaction, soup)
+
             info = MagiccardsScraper._get_card_info(soup)
             price = MagiccardsScraper._get_prices(soup)
 
@@ -82,6 +84,29 @@ class MagiccardsScraper(object):
             raise Exception('card %s %s was not found' % (name, redaction))
         else:
             return models.Card(name.strip().lower(), redaction.strip().lower(), info=card_info, prices=card_prices)
+
+    @staticmethod
+    def _select_reda(name, reda, soup):
+        """Finds cards redaction page and returns it
+
+        :param name: card name
+        :param reda: redaction name
+        :param soup: current card page soup
+        :return: soup page with correct redaction
+        """
+        content_table = soup.find_all('table')[3]
+        redas_td = content_table.find_all('td')[2]
+
+        if redas_td.find_all('b')[3].text.split('(')[0].strip().lower() == reda:
+            return soup
+
+        for reda_tag in redas_td.find_all('a'):
+            if reda_tag.text.strip().lower() == reda:
+                url = ext.url_join(ext.get_domain(MagiccardsScraper.MAGICCARDS_BASE_URL), reda_tag['href'])
+                page = urllib2.urlopen(url).read()
+                return BeautifulSoup(page)
+
+        raise Exception('card "%s" with redaction "%s" was not found' % (name, reda))
 
     @staticmethod
     def _is_card_page(soup):
