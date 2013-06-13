@@ -26,11 +26,14 @@ def redactions_update():
     return redirect(url_for('redactions'))
 
 
-@app.route('/spellshop')
-def spellshop():
-    redas = filter(lambda r: scrapers.SpellShopScraper.SHOP_NAME in r.shops, db.get_redas())
-    cards = db.get_cards()
-    return render_template('spellshop.html', cards=cards, redas=redas)
+@app.route('/spellshop/all', defaults={'reda': 'all'}, methods=['GET'])
+@app.route('/spellshop/<reda>', methods=['GET'])
+def spellshop(reda):
+    shops = [scrapers.SpellShopScraper.SHOP_NAME]
+    redas = filter(lambda r: all([shop in r.shops for shop in shops]), db.get_redas())
+    cards = db.get_cards(shops=shops, redas=None if reda == 'all' else [reda])
+
+    return render_template('spellshop.html', active_reda=reda, redas=redas, cards=cards)
 
 
 @app.route('/spellshop/update')

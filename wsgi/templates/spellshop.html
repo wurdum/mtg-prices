@@ -1,6 +1,7 @@
 {% extends 'cards_base.html' %}
 {% block cards_table %}
     <div class="cards-table pull-right">
+        {% if cards|length > 0 %}
         <table class="table table-bordered table-striped">
             <thead>
             <tr>
@@ -36,5 +37,11 @@
             {% endfor %}
             </tbody>
         </table>
+        {% else %}
+        <div class="center-box text-center">
+            <img src="{{ url_for('static', filename='img/error.jpg') }}">
+            <p class="text-center lead">No cards found in this redaction :(</p>
+        </div>
+        {% endif %}
     </div>
 {% endblock %}

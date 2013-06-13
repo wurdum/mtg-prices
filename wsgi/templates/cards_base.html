@@ -4,12 +4,14 @@
         <a class="btn btn-info pull-right" href="{{ url_for('spellshop_update') }}">Update</a>
         <span class="clearfix"></span>
     </p>
-    <ul class="nav nav-list redas-menu pull-left">
-        <li class="active"><a href="#"><i class="icon-home icon-white"></i> All</a></li>
-        <li class="divider"></li>
-        {% for reda in redas %}
-        <li><a href="#">{{ reda.name }}</a></li>
-        {% endfor %}
-    </ul>
+    <div class="well well-small redas-menu pull-left">
+        <ul class="nav nav-list">
+            <li class="{{ active_reda|active_if('all') }}"><a href="{{ url_for('spellshop') }}"><i class="icon-home"></i> all</a></li>
+            <li class="divider"></li>
+            {% for reda in redas %}
+                <li class="{{ active_reda|active_if(reda.name) }}"><a href="{{ url_for('spellshop', reda=reda.name) }}">{{ reda.name }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
     {% block cards_table %}{% endblock %}
 {% endblock %}

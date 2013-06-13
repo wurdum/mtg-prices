@@ -18,14 +18,20 @@ def save_cards(cards):
         db.cards.insert(todict(c))
 
 
-def get_cards():
+def get_cards(shops=None, redas=None):
     """
     Returns all cards from db as list of models.Card
     """
     connection = pymongo.MongoClient(MONGO_URL)
     db = connection[DB]
 
-    return [tocard(card_dict) for card_dict in db.cards.find()]
+    selector = {}
+    if shops:
+        selector['shops.name'] = {'$in': shops}
+    if redas:
+        selector['redaction'] = {'$in': redas}
+
+    return [tocard(card_dict) for card_dict in db.cards.find(selector)]
 
 
 def save_redas(redas):
@@ -40,14 +46,18 @@ def save_redas(redas):
         db.redas.insert(todict(reda))
 
 
-def get_redas():
+def get_redas(name=None):
     """
     Loads redactions list from db
+
+    :param name: redaction name that will be searched
+    :return: list of models.Redaction
     """
     connection = pymongo.MongoClient(MONGO_URL)
     db = connection[DB]
 
-    return [toreda(reda_dict) for reda_dict in db.redas.find()]
+    selector = {} if name is None else {'name': name}
+    return [toreda(reda_dict) for reda_dict in db.redas.find(selector)]
 
 
 def tocard(dict_card):
