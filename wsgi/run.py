@@ -1,4 +1,3 @@
-import time
 from flask import Flask, render_template, redirect, url_for
 import scrapers
 import db
@@ -36,16 +35,19 @@ def spellshop(reda):
     return render_template('spellshop.html', active_reda=reda, redas=redas, cards=cards)
 
 
-@app.route('/spellshop/update')
-def spellshop_update():
-    redas = filter(lambda r: 'spellshop' in r.shops, db.get_redas())
+@app.route('/spellshop/update/all', defaults={'reda': 'all'}, methods=['GET'])
+@app.route('/spellshop/update/<reda>', methods=['GET'])
+def spellshop_update(reda):
+    redas = filter(lambda r: 'spellshop' in r.shops,
+                   db.get_redas() if reda == 'all' else db.get_redas(name=reda))
+
     cards = []
-    for reda in redas[2:3]:
-        cards += scrapers.SpellShopScraper.get_cards(reda)
+    for r in redas:
+        cards += scrapers.SpellShopScraper.get_cards(r)
 
-    db.save_cards(cards)
+    db.save_cards(cards, shops=[scrapers.SpellShopScraper.SHOP_NAME])
 
-    return redirect(url_for('spellshop'))
+    return redirect(url_for('spellshop', reda=reda))
 
 
 if __name__ == "__main__":

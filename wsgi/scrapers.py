@@ -1,6 +1,7 @@
 # coding=utf-8
 import eventlet
 import csv
+import difflib
 from eventlet.green import urllib2
 from bs4 import BeautifulSoup
 import models
@@ -45,30 +46,27 @@ class MagiccardsScraper(object):
         """
         page_url = MagiccardsScraper.MAGICCARDS_BASE_URL + MagiccardsScraper.MAGICCARDS_QUERY_TMPL % urllib2.quote(name)
 
-        try:
-            page = urllib2.urlopen(page_url).read()
-            soup = BeautifulSoup(page)
+        page = urllib2.urlopen(page_url).read()
+        soup = BeautifulSoup(page)
 
-            if not MagiccardsScraper._is_card_page(soup):
-                hint = MagiccardsScraper._try_get_hint(soup)
-                if hint is not None:
-                    name = hint.text
-                    page_url = ext.url_join(ext.get_domain(page_url), hint['href'])
-                    page = urllib2.urlopen(page_url).read()
-                    soup = BeautifulSoup(page)
+        if not MagiccardsScraper._is_card_page(soup):
+            hint = MagiccardsScraper._try_get_hint(name, soup)
+            if hint is not None:
+                name = hint.text
+                page_url = ext.url_join(ext.get_domain(page_url), hint['href'])
+                page = urllib2.urlopen(page_url).read()
+                soup = BeautifulSoup(page)
 
-            soup = MagiccardsScraper._select_reda(name, redaction, soup)
+        soup = MagiccardsScraper._select_reda(name, redaction, soup)
 
-            type = MagiccardsScraper._get_card_type(soup)
-            info = MagiccardsScraper._get_card_info(soup)
-            price = MagiccardsScraper._get_prices(soup)
+        type = MagiccardsScraper._get_card_type(soup)
+        info = MagiccardsScraper._get_card_info(soup)
+        price = MagiccardsScraper._get_prices(soup)
 
-            card_info = models.CardInfo(**info)
-            card_prices = models.CardPrices(**price)
-        except:
-            raise Exception('card %s %s was not found' % (name, redaction))
-        else:
-            return models.Card(uni(name), uni(redaction), type, info=card_info, prices=card_prices)
+        card_info = models.CardInfo(**info)
+        card_prices = models.CardPrices(**price)
+
+        return models.Card(uni(name), uni(redaction), type, info=card_info, prices=card_prices)
 
     @staticmethod
     def _select_reda(name, reda, soup):
@@ -82,7 +80,10 @@ class MagiccardsScraper(object):
         content_table = soup.find_all('table')[3]
         redas_td = content_table.find_all('td')[2]
 
-        if uni(redas_td.find_all('b')[3].text.split('(')[0]) == reda:
+        redas_bs = redas_td.find_all('b')
+        # if double sided card
+        reda_index = 3 if len(redas_bs) == 5 else 4
+        if uni(redas_bs[reda_index].text.split('(')[0]) == reda:
             return soup
 
         for reda_tag in redas_td.find_all('a'):
@@ -103,14 +104,18 @@ class MagiccardsScraper(object):
         return len(soup.find_all('table')) > 2
 
     @staticmethod
-    def _try_get_hint(soup):
-        """Parses soup page and tries find out card hint
+    def _try_get_hint(name, soup):
+        """Parses soup page and tries find out card hint.
+        Selects hint that has max affinity with base card name.
 
+        :param name: cards name
         :param soup: soup page from www.magiccards.info
         :return: tag 'a' with hint
         """
-        hints_list = soup.find_all('li')
-        return hints_list[0].contents[0] if hints_list else None
+        hints_list = [(hint_li.contents[0], difflib.SequenceMatcher(a=uni(name), b=uni(hint_li.contents[0].text)).ratio())
+                      for hint_li in soup.find_all('li')]
+
+        return sorted(hints_list, key=lambda h: h[1], reverse=True)[0][0] if hints_list else None
 
     @staticmethod
     def _get_card_type(soup):
@@ -119,7 +124,10 @@ class MagiccardsScraper(object):
         :param soup: soup page from www.magiccards.info
         :return: card type as string
         """
-        return uni(soup.find_all('table')[3].find_all('td')[2].find_all('b')[3].text.split('(')[1][:-1])
+        redas_bs = soup.find_all('table')[3].find_all('td')[2].find_all('b')
+        # if double sided card
+        reda_index = 3 if len(redas_bs) == 5 else 4
+        return uni(redas_bs[reda_index].text.split('(')[1][:-1])
 
     @staticmethod
     def _get_card_info(soup):
