@@ -57,6 +57,13 @@ class MagiccardsScraper(object):
                 page = urllib2.urlopen(page_url).read()
                 soup = BeautifulSoup(page)
 
+        if not MagiccardsScraper._is_en(soup):
+            en_link_tag = list(soup.find_all('table')[3].find_all('td')[2].find('img', alt='English').next_elements)[1]
+            name = en_link_tag.text
+            page_url = ext.url_join(ext.get_domain(page_url), en_link_tag['href'])
+            page = urllib2.urlopen(page_url).read()
+            soup = BeautifulSoup(page)
+
         soup = MagiccardsScraper._select_reda(name, redaction, soup)
 
         type = MagiccardsScraper._get_card_type(soup)
@@ -67,6 +74,14 @@ class MagiccardsScraper(object):
         card_prices = models.CardPrices(**price)
 
         return models.Card(uni(name), uni(redaction), type, info=card_info, prices=card_prices)
+
+    @staticmethod
+    def _is_en(soup):
+        """
+        Checks if found card is en
+        """
+        en_link = list(soup.find_all('table')[3].find_all('td')[2].find('img', alt='English').next_elements)[1]
+        return en_link.name == 'b'
 
     @staticmethod
     def _select_reda(name, reda, soup):
@@ -280,7 +295,8 @@ class SpellShopScraper(object):
             cards_divs = cards_table.find_all('div')
             pool = eventlet.GreenPool(len(cards_divs))
             for card in pool.imap(SpellShopScraper._parse_card_shop_info, map(lambda cd: (cd, reda), cards_divs)):
-                cards.append(card)
+                if card is not None:
+                    cards.append(card)
 
         return cards
 
@@ -296,6 +312,9 @@ class SpellShopScraper(object):
         card_tds = card_tr.find_all('td')
 
         name = uni(card_tds[1].find('a').text)
+        if name.split()[0] in ['mountain', 'swamp', 'island', 'plains']:
+            return None
+
         url = ext.url_join(ext.get_domain(SpellShopScraper.BASE_URL), card_tds[1].find('a')['href'])
         price = ext.uah_to_dollar(card_tds[4].text)
         number = len(card_tds[5].find_all('option'))
