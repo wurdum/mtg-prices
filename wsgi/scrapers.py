@@ -29,6 +29,14 @@ def uni(value):
     return value.strip().lower()
 
 
+def openurl(url):
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.110 Safari/537.36'}
+
+    opener = urllib2.build_opener()
+    opener.addheaders = headers.items()
+    return opener.open(url).read()
+
+
 class MagiccardsScraper(object):
     """
     Parses cards info using www.magiccards.info resource
@@ -46,34 +54,36 @@ class MagiccardsScraper(object):
         """
         page_url = MagiccardsScraper.MAGICCARDS_BASE_URL + MagiccardsScraper.MAGICCARDS_QUERY_TMPL % urllib2.quote(name)
 
-        page = urllib2.urlopen(page_url).read()
+        page = openurl(page_url)
         soup = BeautifulSoup(page)
+        try:
+            if not MagiccardsScraper._is_card_page(soup):
+                hint = MagiccardsScraper._try_get_hint(name, soup)
+                if hint is not None:
+                    name = hint.text
+                    page_url = ext.url_join(ext.get_domain(page_url), hint['href'])
+                    page = openurl(page_url)
+                    soup = BeautifulSoup(page)
 
-        if not MagiccardsScraper._is_card_page(soup):
-            hint = MagiccardsScraper._try_get_hint(name, soup)
-            if hint is not None:
-                name = hint.text
-                page_url = ext.url_join(ext.get_domain(page_url), hint['href'])
-                page = urllib2.urlopen(page_url).read()
+            if not MagiccardsScraper._is_en(soup):
+                en_link_tag = list(soup.find_all('table')[3].find_all('td')[2].find('img', alt='English').next_elements)[1]
+                name = en_link_tag.text
+                page_url = ext.url_join(ext.get_domain(page_url), en_link_tag['href'])
+                page = openurl(page_url)
                 soup = BeautifulSoup(page)
 
-        if not MagiccardsScraper._is_en(soup):
-            en_link_tag = list(soup.find_all('table')[3].find_all('td')[2].find('img', alt='English').next_elements)[1]
-            name = en_link_tag.text
-            page_url = ext.url_join(ext.get_domain(page_url), en_link_tag['href'])
-            page = urllib2.urlopen(page_url).read()
-            soup = BeautifulSoup(page)
+            soup = MagiccardsScraper._select_reda(name, redaction, soup)
 
-        soup = MagiccardsScraper._select_reda(name, redaction, soup)
+            type = MagiccardsScraper._get_card_type(soup)
+            info = MagiccardsScraper._get_card_info(soup)
+            price = MagiccardsScraper._get_prices(soup)
 
-        type = MagiccardsScraper._get_card_type(soup)
-        info = MagiccardsScraper._get_card_info(soup)
-        price = MagiccardsScraper._get_prices(soup)
-
-        card_info = models.CardInfo(**info)
-        card_prices = models.CardPrices(**price)
-
-        return models.Card(uni(name), uni(redaction), type, info=card_info, prices=card_prices)
+            card_info = models.CardInfo(**info)
+            card_prices = models.CardPrices(**price)
+        except:
+            return None
+        else:
+            return models.Card(uni(name), uni(redaction), type, info=card_info, prices=card_prices)
 
     @staticmethod
     def _is_en(soup):
@@ -103,8 +113,8 @@ class MagiccardsScraper(object):
 
         for reda_tag in redas_td.find_all('a'):
             if reda_tag.text.strip().lower() == reda:
-                url = ext.url_join(ext.get_domain(MagiccardsScraper.MAGICCARDS_BASE_URL), reda_tag['href'])
-                page = urllib2.urlopen(url).read()
+                page_url = ext.url_join(ext.get_domain(MagiccardsScraper.MAGICCARDS_BASE_URL), reda_tag['href'])
+                page = openurl(page_url)
                 return BeautifulSoup(page)
 
         raise Exception('card "%s" with redaction "%s" was not found' % (name, reda))
@@ -167,8 +177,9 @@ class MagiccardsScraper(object):
         sid = uni(ext.get_query_string_params(request_url)['sid'])
 
         tcg_scrapper = TCGPlayerScraper(sid)
+        prices = tcg_scrapper.get_brief_info()
 
-        return tcg_scrapper.get_brief_info()
+        return prices
 
     @staticmethod
     def get_redas():
@@ -176,8 +187,8 @@ class MagiccardsScraper(object):
 
         :return: list of models.Redaction
         """
-        url = ext.url_join(MagiccardsScraper.MAGICCARDS_BASE_URL, MagiccardsScraper.MAGICCARDS_REDACTIONS_URL)
-        page = urllib2.urlopen(url).read()
+        page_url = ext.url_join(MagiccardsScraper.MAGICCARDS_BASE_URL, MagiccardsScraper.MAGICCARDS_REDACTIONS_URL)
+        page = openurl(page_url)
         soup = BeautifulSoup(page)
 
         en_reda_table = soup.find_all('table')[1]
@@ -229,7 +240,7 @@ class TCGPlayerScraper(object):
 
         :return: dictionary {sid, tcg card url, low, mid, high}
         """
-        tcg_response = urllib2.urlopen(self.brief_url).read()
+        tcg_response = openurl(self.brief_url)
         html_response = tcg_response.replace('\'+\'', '').replace('\\\'', '"')[16:][:-3]
 
         tcg_soup = BeautifulSoup(html_response)
@@ -258,7 +269,7 @@ class SpellShopScraper(object):
         :param redas: list of models.Redaction
         :returns: list of updated models.Redaction
         """
-        page = urllib2.urlopen(SpellShopScraper.BASE_URL).read()
+        page = openurl(SpellShopScraper.BASE_URL)
         soup = BeautifulSoup(page)
 
         menu_list = soup.find_all('td', class_='menu_body')[1]
@@ -286,14 +297,14 @@ class SpellShopScraper(object):
         :return: list of models.Card
         """
         url = reda.shops[SpellShopScraper.SHOP_NAME] + '&show_all=yes'
-        page = urllib2.urlopen(url).read()
+        page = openurl(url)
         soup = BeautifulSoup(page)
 
         cards_table = soup.find('td', class_='td_center')
         cards = []
         if cards_table is not None:
-            cards_divs = cards_table.find_all('div')
-            pool = eventlet.GreenPool(len(cards_divs))
+            cards_divs = filter(lambda d: uni(d.text), cards_table.find_all('div'))
+            pool = eventlet.GreenPool(len(cards_divs) if len(cards_divs) < 100 else 100)
             for card in pool.imap(SpellShopScraper._parse_card_shop_info, map(lambda cd: (cd, reda), cards_divs)):
                 if card is not None:
                     cards.append(card)
@@ -320,6 +331,9 @@ class SpellShopScraper(object):
         number = len(card_tds[5].find_all('option'))
 
         card = MagiccardsScraper.get_card(name, reda.name)
+        if card is None:
+            return None
+
         card.shops.append(models.Shop(SpellShopScraper.SHOP_NAME, url, price, number))
 
         return card
@@ -340,7 +354,7 @@ class BuyMagicScraper(object):
         :param redas: list of models.Redaction
         :returns: list of updated models.Redaction
         """
-        page = urllib2.urlopen(BuyMagicScraper.BASE_URL).read()
+        page = openurl(BuyMagicScraper.BASE_URL)
         page = page \
             .replace('"bordercolor="#000000" bgcolor="#FFFFFF"', '') \
             .replace('<link rel="stylesheet" href="/jquery.fancybox-1.3.0.css" type="text/css" media="screen">', '') \
