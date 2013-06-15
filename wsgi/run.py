@@ -37,7 +37,7 @@ def shop(shop, reda):
     redas = filter(lambda r: all([shop in r.shops for shop in shops]), db.get_redas())
     cards = db.get_cards(shops=shops, redas=None if reda == 'all' else [reda])
 
-    return render_template('%s.html' % shop, shop=shop, active_reda=reda, redas=redas, cards=cards)
+    return render_template('spellshop.html', shop=shop, active_reda=reda, redas=redas, cards=cards)
 
 
 @app.route('/<shop>/update', defaults={'reda': 'all'}, methods=['GET'])

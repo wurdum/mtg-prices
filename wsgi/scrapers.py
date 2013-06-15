@@ -2,6 +2,8 @@
 import eventlet
 import csv
 import difflib
+import urlparse
+import re
 from eventlet.green import urllib2
 from bs4 import BeautifulSoup
 import models
@@ -30,13 +32,25 @@ def uni(value):
     return value.strip().lower()
 
 
+def urlEncodeNonAscii(b):
+    return re.sub('[\x80-\xFF]', lambda c: '%%%02x' % ord(c.group(0)), b)
+
+
+def iriToUri(iri):
+    parts= urlparse.urlparse(iri)
+    return urlparse.urlunparse(
+        part.encode('idna') if parti==1 else urlEncodeNonAscii(part.encode('utf-8'))
+            for parti, part in enumerate(parts)
+    )
+
+
 def openurl(url):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.110 Safari/537.36'}
 
     opener = urllib2.build_opener()
     opener.addheaders = headers.items()
-    return opener.open(url).read()
+    return opener.open(iriToUri(url)).read()
 
 
 class MagiccardsScraper(object):
@@ -399,3 +413,89 @@ class BuyMagicScraper(object):
                 reda.shops[BuyMagicScraper.SHOP_NAME] = url
 
         return redas
+
+    @staticmethod
+    def get_cards(reda):
+        """Parses www.buymagic.ua to find all available card for reda redaction
+
+        :param reda: cards redaction, object of models.Redaction
+        :return: list of models.Card
+        """
+        page_url = reda.shops[BuyMagicScraper.SHOP_NAME]
+        page = openurl(page_url)
+        page = page \
+            .replace('"bordercolor="#000000" bgcolor="#FFFFFF"', '') \
+            .replace('<link rel="stylesheet" href="/jquery.fancybox-1.3.0.css" type="text/css" media="screen">', '') \
+            .replace('"title=', '" title=')
+        soup = BeautifulSoup(page, from_encoding='utf-8')
+
+        pager_div = soup.find('div', class_='c2').contents[5]
+        pages_tags = pager_div.find_all('a')
+
+        pages = [page_url]
+        pages += [ext.url_join(ext.get_domain(BuyMagicScraper.BASE_URL), tag['href']) for tag in pages_tags]
+
+        cards = []
+        pool = eventlet.GreenPool(len(pages))
+        for page_cards in pool.imap(BuyMagicScraper._parse_cards_at_page, map(lambda p: (p, reda), pages)):
+            if page_cards is not None:
+                cards += page_cards
+
+        return cards
+
+    @staticmethod
+    def _parse_cards_at_page(args):
+        page_url, reda = args
+        page = openurl(page_url)
+        page = page \
+            .replace('"bordercolor="#000000" bgcolor="#FFFFFF"', '') \
+            .replace('<link rel="stylesheet" href="/jquery.fancybox-1.3.0.css" type="text/css" media="screen">', '') \
+            .replace('"title=', '" title=')
+        soup = BeautifulSoup(page, from_encoding='utf-8')
+
+        root_div = soup.find('div', class_='c2')
+        card_divs = root_div.find('p').find_all('div')[:-2]
+
+        cards = []
+        pool = eventlet.GreenPool(len(card_divs))
+        for card in pool.imap(BuyMagicScraper._parse_card_shop_info, map(lambda d: (d, reda), card_divs)):
+            if card is not None:
+                cards.append(card)
+
+        return cards
+
+    @staticmethod
+    def _parse_card_shop_info(args):
+        """Parses card shop info and find this card at www.magiccard.info
+
+        :param args: tuple of (soup tag with card info, models.Redaction)
+        :return: models.Card
+        """
+
+        card_div, reda = args
+        inner_div = card_div.find('div')
+        if inner_div is not None:
+            card_div = inner_div
+
+        header_tag = card_div.find('a')
+        url = uni(header_tag['href'])
+        name = uni(header_tag.text)
+
+        price_table = card_div.find('table')
+        price_row = price_table.find('tr').find_all('td')
+        type = 'common'
+        price = ext.uah_to_dollar(uni(price_row[1].text))
+        number = len(price_row[2].find_all('option'))
+
+        card = db.get_card(name, reda.name)
+        if card is None:
+            card = MagiccardsScraper.get_card(name, reda.name)
+
+        if card is None:
+            return None
+
+        card_shops = [shop for shop in card.shops if shop.name != BuyMagicScraper.SHOP_NAME]
+        card_shops.append(models.Shop(BuyMagicScraper.SHOP_NAME, url, price, number, type=type))
+        card.shops = card_shops
+
+        return card
