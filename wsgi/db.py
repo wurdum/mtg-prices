@@ -6,10 +6,9 @@ MONGO_URL = os.environ.get('OPENSHIFT_MONGODB_DB_URL', 'localhost')
 DB = os.environ.get('OPENSHIFT_APP_NAME', 'prices')
 
 
-def save_cards(cards, shops=None):
-    """Saves cards list to db with token as key
-
-    :param shops: list of shops in which cards will be updated, list of strings
+def save_cards(cards):
+    """
+    Saves cards list to db with token as key
     """
     connection = pymongo.MongoClient(MONGO_URL)
     db = connection[DB]
@@ -17,13 +16,24 @@ def save_cards(cards, shops=None):
     for card in cards:
         card_selector = {'name': card.name, 'redaction': card.redaction}
         dbcard = db.cards.find_one(card_selector)
-        if dbcard is None:
-            db.cards.insert(todict(card))
+        if dbcard is not None:
+            card.shops += filter(lambda s: s not in card.shops, tocard(dbcard).shops)
+            db.cards.update(card_selector, {'$set': {'shops': todict(card.shops)}})
         else:
-            not_updated_shops = filter(lambda s: s.name not in shops, tocard(dbcard).shops)
-            card.shops += not_updated_shops
-            db.cards.remove(card_selector)
             db.cards.insert(todict(card))
+
+
+def get_card(name, reda):
+    """Searches card by redaction and name
+
+    :param name: card name
+    :param reda: card redaction
+    """
+    connection = pymongo.MongoClient(MONGO_URL)
+    db = connection[DB]
+
+    dbcard = db.cards.find_one({'name': name, 'redaction': reda})
+    return tocard(dbcard) if dbcard is not None else None
 
 
 def get_cards(shops=None, redas=None):

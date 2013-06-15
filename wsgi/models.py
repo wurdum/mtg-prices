@@ -3,21 +3,13 @@ class Card(object):
     Card model with info and prices
     """
 
-    def __init__(self, name, redaction, type, info=None, prices=None, shops=None):
+    def __init__(self, name, redaction, type, info, prices, shops=None):
         self.name = name
         self.redaction = redaction
         self.type = type
         self.prices = prices
         self.info = info
         self.shops = shops if shops else []
-
-    @property
-    def has_info(self):
-        return self.info is not None
-
-    @property
-    def has_prices(self):
-        return self.prices is not None
 
     def __hash__(self):
         return hash((self.name, self.redaction))
@@ -69,6 +61,12 @@ class Shop(object):
         self.price = price
         self.number = number
         self.type = type
+
+    def __hash__(self):
+        return hash((self.name, self.url))
+
+    def __eq__(self, other):
+        return (self.name, self.url) == (other.name, other.url)
 
     def __repr__(self):
         return '%s %s %s' % (self.name, self.type, self.url)

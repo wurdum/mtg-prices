@@ -43,8 +43,9 @@ def spellshop_update(reda):
                    db.get_redas() if reda == 'all' else db.get_redas(name=reda))
 
     for r in redas:
-        cards = filter(lambda c: c.has_info and c.has_prices, scrapers.SpellShopScraper.get_cards(r))
-        db.save_cards(cards, shops=[scrapers.SpellShopScraper.SHOP_NAME])
+        cards = scrapers.SpellShopScraper.get_cards(r)
+        db.save_cards(cards)
+        print r.name, len(cards)
 
     return redirect(url_for('spellshop', reda=reda))
 

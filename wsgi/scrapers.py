@@ -6,6 +6,7 @@ from eventlet.green import urllib2
 from bs4 import BeautifulSoup
 import models
 import ext
+import db
 
 
 def get_redactions():
@@ -30,7 +31,8 @@ def uni(value):
 
 
 def openurl(url):
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.110 Safari/537.36'}
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.110 Safari/537.36'}
 
     opener = urllib2.build_opener()
     opener.addheaders = headers.items()
@@ -53,18 +55,21 @@ class MagiccardsScraper(object):
         :return: models.Card object
         """
         page_url = MagiccardsScraper.MAGICCARDS_BASE_URL + MagiccardsScraper.MAGICCARDS_QUERY_TMPL % urllib2.quote(name)
-
         page = openurl(page_url)
         soup = BeautifulSoup(page)
         try:
+            # if card was not found by name, try to use magiccards hints
             if not MagiccardsScraper._is_card_page(soup):
                 hint = MagiccardsScraper._try_get_hint(name, soup)
-                if hint is not None:
-                    name = hint.text
-                    page_url = ext.url_join(ext.get_domain(page_url), hint['href'])
-                    page = openurl(page_url)
-                    soup = BeautifulSoup(page)
+                if hint is None:
+                    return None
 
+                name = hint.text
+                page_url = ext.url_join(ext.get_domain(page_url), hint['href'])
+                page = openurl(page_url)
+                soup = BeautifulSoup(page)
+
+            # if card is found, but it's not english
             if not MagiccardsScraper._is_en(soup):
                 en_link_tag = list(soup.find_all('table')[3].find_all('td')[2].find('img', alt='English').next_elements)[1]
                 name = en_link_tag.text
@@ -72,7 +77,14 @@ class MagiccardsScraper(object):
                 page = openurl(page_url)
                 soup = BeautifulSoup(page)
 
-            soup = MagiccardsScraper._select_reda(name, redaction, soup)
+            # if card redaction is wrong, try to get correct
+            if not MagiccardsScraper._reda_is(redaction, soup):
+                page_url = MagiccardsScraper._get_correct_reda(redaction, soup)
+                if page_url is None:
+                    return None
+
+                page = openurl(page_url)
+                soup = BeautifulSoup(page)
 
             type = MagiccardsScraper._get_card_type(soup)
             info = MagiccardsScraper._get_card_info(soup)
@@ -83,7 +95,7 @@ class MagiccardsScraper(object):
         except:
             return None
         else:
-            return models.Card(uni(name), uni(redaction), type, info=card_info, prices=card_prices)
+            return models.Card(uni(name), uni(redaction), type, card_info, card_prices)
 
     @staticmethod
     def _is_en(soup):
@@ -94,30 +106,35 @@ class MagiccardsScraper(object):
         return en_link.name == 'b'
 
     @staticmethod
-    def _select_reda(name, reda, soup):
-        """Finds cards redaction page and returns it
+    def _reda_is(reda, soup):
+        """Checks if card redaction is correct
 
-        :param name: card name
-        :param reda: redaction name
-        :param soup: current card page soup
-        :return: soup page with correct redaction
+        :param reda: required card redaction
+        :param soup: soup of card page
         """
         content_table = soup.find_all('table')[3]
         redas_td = content_table.find_all('td')[2]
 
         redas_bs = redas_td.find_all('b')
-        # if double sided card
+        # for double sided card 4
         reda_index = 3 if len(redas_bs) == 5 else 4
-        if uni(redas_bs[reda_index].text.split('(')[0]) == reda:
-            return soup
+        return uni(redas_bs[reda_index].text.split('(')[0]) == reda
+
+    @staticmethod
+    def _get_correct_reda(reda, soup):
+        """Searches correct redaction for card and returns it's url
+
+        :param reda: required card redaction
+        :param soup: soup of card page
+        """
+        content_table = soup.find_all('table')[3]
+        redas_td = content_table.find_all('td')[2]
 
         for reda_tag in redas_td.find_all('a'):
             if reda_tag.text.strip().lower() == reda:
-                page_url = ext.url_join(ext.get_domain(MagiccardsScraper.MAGICCARDS_BASE_URL), reda_tag['href'])
-                page = openurl(page_url)
-                return BeautifulSoup(page)
+                return ext.url_join(ext.get_domain(MagiccardsScraper.MAGICCARDS_BASE_URL), reda_tag['href'])
 
-        raise Exception('card "%s" with redaction "%s" was not found' % (name, reda))
+        return None
 
     @staticmethod
     def _is_card_page(soup):
@@ -137,10 +154,13 @@ class MagiccardsScraper(object):
         :param soup: soup page from www.magiccards.info
         :return: tag 'a' with hint
         """
-        hints_list = [(hint_li.contents[0], difflib.SequenceMatcher(a=uni(name), b=uni(hint_li.contents[0].text)).ratio())
-                      for hint_li in soup.find_all('li')]
+        hints_list = []
+        for hint_li in soup.find_all('li'):
+            hint_tag = hint_li.contents[0]
+            resemble_rate = difflib.SequenceMatcher(a=uni(name), b=uni(hint_li.contents[0].text)).ratio()
+            hints_list.append({'a_tag': hint_tag, 'rate': resemble_rate})
 
-        return sorted(hints_list, key=lambda h: h[1], reverse=True)[0][0] if hints_list else None
+        return sorted(hints_list, key=lambda h: h['rate'], reverse=True)[0] if hints_list else None
 
     @staticmethod
     def _get_card_type(soup):
@@ -330,11 +350,16 @@ class SpellShopScraper(object):
         price = ext.uah_to_dollar(card_tds[4].text)
         number = len(card_tds[5].find_all('option'))
 
-        card = MagiccardsScraper.get_card(name, reda.name)
+        card = db.get_card(name, reda.name)
+        if card is None:
+            card = MagiccardsScraper.get_card(name, reda.name)
+
         if card is None:
             return None
 
-        card.shops.append(models.Shop(SpellShopScraper.SHOP_NAME, url, price, number))
+        card_shops = [shop for shop in card.shops if shop.name != SpellShopScraper.SHOP_NAME]
+        card_shops.append(models.Shop(SpellShopScraper.SHOP_NAME, url, price, number))
+        card.shops = card_shops
 
         return card
 
