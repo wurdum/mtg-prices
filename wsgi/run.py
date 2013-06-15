@@ -4,6 +4,7 @@ import db
 import filters
 
 app = Flask(__name__)
+all_shops = [scrapers.SpellShopScraper, scrapers.BuyMagicScraper]
 filters.register(app)
 
 
@@ -26,28 +27,34 @@ def redactions_update():
     return redirect(url_for('redactions'))
 
 
-@app.route('/spellshop', defaults={'reda': 'all'}, methods=['GET'])
-@app.route('/spellshop/<reda>', methods=['GET'])
-def spellshop(reda):
-    shops = [scrapers.SpellShopScraper.SHOP_NAME]
+@app.route('/<shop>', defaults={'reda': 'all'}, methods=['GET'])
+@app.route('/<shop>/<reda>', methods=['GET'])
+def shop(shop, reda):
+    if shop not in [sh.SHOP_NAME for sh in all_shops]:
+        shop = all_shops[0].SHOP_NAME
+
+    shops = [shop]
     redas = filter(lambda r: all([shop in r.shops for shop in shops]), db.get_redas())
     cards = db.get_cards(shops=shops, redas=None if reda == 'all' else [reda])
 
-    return render_template('spellshop.html', active_reda=reda, redas=redas, cards=cards)
+    return render_template('%s.html' % shop, shop=shop, active_reda=reda, redas=redas, cards=cards)
 
 
-@app.route('/spellshop/update', defaults={'reda': 'all'}, methods=['GET'])
-@app.route('/spellshop/update/<reda>', methods=['GET'])
-def spellshop_update(reda):
-    redas = filter(lambda r: 'spellshop' in r.shops,
+@app.route('/<shop>/update', defaults={'reda': 'all'}, methods=['GET'])
+@app.route('/<shop>/update/<reda>', methods=['GET'])
+def shop_update(shop, reda):
+    if shop not in [sh.SHOP_NAME for sh in all_shops]:
+        shop = all_shops[0].SHOP_NAME
+
+    redas = filter(lambda r: shop in r.shops,
                    db.get_redas() if reda == 'all' else db.get_redas(name=reda))
 
     for r in redas:
-        cards = scrapers.SpellShopScraper.get_cards(r)
+        cards = [sh for sh in all_shops if sh.SHOP_NAME == shop][0].get_cards(r)
         db.save_cards(cards)
         print r.name, len(cards)
 
-    return redirect(url_for('spellshop', reda=reda))
+    return redirect(url_for('shop', shop=shop, reda=reda))
 
 
 if __name__ == "__main__":

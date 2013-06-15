@@ -1,15 +1,15 @@
 {% extends 'base.html' %}
 {% block content %}
     <p>
-        <a class="btn btn-info pull-right" href="{{ url_for('spellshop_update', reda=active_reda) }}">Update</a>
+        <a class="btn btn-info pull-right" href="{{ url_for('shop_update', shop=shop, reda=active_reda) }}">Update</a>
         <span class="clearfix"></span>
     </p>
     <div class="well well-small redas-menu pull-left">
         <ul class="nav nav-list">
-            <li class="{{ active_reda|active_if('all') }}"><a href="{{ url_for('spellshop') }}"><i class="icon-home"></i> all</a></li>
+            <li class="{{ active_reda|active_if('all') }}"><a href="{{ url_for('shop', shop=shop) }}"><i class="icon-home"></i> all</a></li>
             <li class="divider"></li>
             {% for reda in redas %}
-                <li class="{{ active_reda|active_if(reda.name) }}"><a href="{{ url_for('spellshop', reda=reda.name) }}">{{ reda.name }}</a></li>
+                <li class="{{ active_reda|active_if(reda.name) }}"><a href="{{ url_for('shop', shop=shop, reda=reda.name) }}">{{ reda.name }}</a></li>
             {% endfor %}
         </ul>
     </div>
