@@ -1,11 +1,13 @@
 # coding=utf-8
+import gzip
+from StringIO import StringIO
 import eventlet
 import csv
 import difflib
 import urlparse
 import re
 from eventlet.green import urllib2
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 import models
 import ext
 import db
@@ -46,11 +48,23 @@ def iriToUri(iri):
 
 def openurl(url):
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.110 Safari/537.36'}
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.110 Safari/537.36',
+        'Accept-Language': 'ru-RU,ru;q=0.8,en-US;q=0.6,en;q=0.4',
+        'Accept-Encoding': 'gzip,deflate',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Cache-Control': 'max-age=0'
+    }
 
     opener = urllib2.build_opener()
     opener.addheaders = headers.items()
-    return opener.open(iriToUri(url)).read()
+    response = opener.open(iriToUri(url))
+
+    if response.info().get('Content-Encoding') == 'gzip':
+        buf = StringIO(response.read())
+        response = gzip.GzipFile(fileobj=buf)
+
+    page = response.read()
+    return page
 
 
 class MagiccardsScraper(object):
@@ -454,11 +468,12 @@ class BuyMagicScraper(object):
         soup = BeautifulSoup(page, from_encoding='utf-8')
 
         root_div = soup.find('div', class_='c2')
-        card_divs = root_div.find('p').find_all('div')[:-2]
+        card_divs = filter(lambda r: isinstance(r, Tag), list(root_div.find('p').children))[:-1]
 
         cards = []
         pool = eventlet.GreenPool(len(card_divs))
-        for card in pool.imap(BuyMagicScraper._parse_card_shop_info, map(lambda d: (d, reda), card_divs)):
+        args = map(lambda d: (d, reda), card_divs)
+        for card in pool.imap(BuyMagicScraper._parse_card_shop_info, args):
             if card is not None:
                 cards.append(card)
 
