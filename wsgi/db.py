@@ -36,7 +36,7 @@ def get_card(name, reda):
     return tocard(dbcard) if dbcard is not None else None
 
 
-def get_cards(shops=None, redas=None):
+def get_cards(shops=None, redas=None, skip=None, limit=None):
     """Returns all cards from db as list of models.Card
 
     :param shops: list of shops in which cards will be searched, list of strings
@@ -52,7 +52,7 @@ def get_cards(shops=None, redas=None):
     if redas:
         selector['redaction'] = {'$in': redas}
 
-    return [tocard(card_dict) for card_dict in db.cards.find(selector)]
+    return [tocard(card_dict) for card_dict in db.cards.find(selector).skip(skip).limit(limit)]
 
 
 def save_redas(redas):

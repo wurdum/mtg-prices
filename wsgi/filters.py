@@ -1,4 +1,5 @@
 import random
+from werkzeug.routing import BaseConverter
 
 
 def price(card, prop):
@@ -75,6 +76,12 @@ def shops(shops, shop_name):
     return filter(lambda f: f.name == shop_name, shops)
 
 
+class RegexConverter(BaseConverter):
+    def __init__(self, url_map, *items):
+        super(RegexConverter, self).__init__(url_map)
+        self.regex = items[0]
+
+
 def register(app):
     app.add_template_filter(idfy)
     app.add_template_filter(active_if)
@@ -82,3 +89,4 @@ def register(app):
     app.add_template_filter(price)
     app.add_template_filter(price_float)
     app.add_template_filter(shops)
+    app.url_map.converters['regex'] = RegexConverter

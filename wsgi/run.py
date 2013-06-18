@@ -5,6 +5,7 @@ import filters
 
 app = Flask(__name__)
 all_shops = [scrapers.SpellShopScraper, scrapers.BuyMagicScraper]
+all_shops_route = '(%s)' % '|'.join(ash.SHOP_NAME for ash in all_shops)
 filters.register(app)
 
 
@@ -27,21 +28,22 @@ def redactions_update():
     return redirect(url_for('redactions'))
 
 
-@app.route('/<shop>', defaults={'reda': 'all'}, methods=['GET'])
-@app.route('/<shop>/<reda>', methods=['GET'])
-def shop(shop, reda):
+@app.route('/<regex("(' + all_shops_route + ')"):shop>', defaults={'reda': 'all', 'skip': 0}, methods=['GET'])
+@app.route('/<regex("(' + all_shops_route + ')"):shop>/<reda>', defaults={'skip': 0}, methods=['GET'])
+@app.route('/<regex("(' + all_shops_route + ')"):shop>/<reda>/<int:skip>', methods=['GET'])
+def shop(shop, reda, skip):
     if shop not in [sh.SHOP_NAME for sh in all_shops]:
         shop = all_shops[0].SHOP_NAME
 
     shops = [shop]
     redas = filter(lambda r: all([shop in r.shops for shop in shops]), db.get_redas())
-    cards = db.get_cards(shops=shops, redas=None if reda == 'all' else [reda])
+    cards = db.get_cards(shops=shops, redas=None if reda == 'all' else [reda], skip=skip, limit=40)
 
-    return render_template('spellshop.html', shop=shop, active_reda=reda, redas=redas, cards=cards)
+    return render_template('shop.html', shop=shop, active_reda=reda, redas=redas, cards=cards)
 
 
-@app.route('/<shop>/update', defaults={'reda': 'all'}, methods=['GET'])
-@app.route('/<shop>/update/<reda>', methods=['GET'])
+@app.route('/<regex("(' + all_shops_route + ')"):shop>/update', defaults={'reda': 'all'}, methods=['GET'])
+@app.route('/<regex("(' + all_shops_route + ')"):shop>/update/<reda>', methods=['GET'])
 def shop_update(shop, reda):
     if shop not in [sh.SHOP_NAME for sh in all_shops]:
         shop = all_shops[0].SHOP_NAME
