@@ -25,27 +25,6 @@ def get_redactions():
     return redas
 
 
-def uni(value):
-    """
-    Makes input string unicode, clears it and lowers
-    """
-    if isinstance(value, str):
-        value = unicode(value, 'utf-8')
-    return value.strip().lower()
-
-
-def urlEncodeNonAscii(b):
-    return re.sub('[\x80-\xFF]', lambda c: '%%%02x' % ord(c.group(0)), b)
-
-
-def iriToUri(iri):
-    parts= urlparse.urlparse(iri)
-    return urlparse.urlunparse(
-        part.encode('idna') if parti==1 else urlEncodeNonAscii(part.encode('utf-8'))
-            for parti, part in enumerate(parts)
-    )
-
-
 def openurl(url):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.110 Safari/537.36',
@@ -57,7 +36,7 @@ def openurl(url):
 
     opener = urllib2.build_opener()
     opener.addheaders = headers.items()
-    response = opener.open(iriToUri(url))
+    response = opener.open(ext.iriToUri(url))
 
     if response.info().get('Content-Encoding') == 'gzip':
         buf = StringIO(response.read())
@@ -123,7 +102,7 @@ class MagiccardsScraper(object):
         except:
             return None
         else:
-            return models.Card(uni(name), uni(redaction), type, card_info, card_prices)
+            return models.Card(ext.uni(name), ext.uni(redaction), type, card_info, card_prices)
 
     @staticmethod
     def _is_en(soup):
@@ -146,7 +125,7 @@ class MagiccardsScraper(object):
         redas_bs = redas_td.find_all('b')
         # for double sided card 4
         reda_index = 3 if len(redas_bs) == 5 else 4
-        return uni(redas_bs[reda_index].text.split('(')[0]) == reda
+        return ext.uni(redas_bs[reda_index].text.split('(')[0]) == reda
 
     @staticmethod
     def _get_correct_reda(reda, soup):
@@ -185,7 +164,7 @@ class MagiccardsScraper(object):
         hints_list = []
         for hint_li in soup.find_all('li'):
             hint_tag = hint_li.contents[0]
-            resemble_rate = difflib.SequenceMatcher(a=uni(name), b=uni(hint_li.contents[0].text)).ratio()
+            resemble_rate = difflib.SequenceMatcher(a=ext.uni(name), b=ext.uni(hint_li.contents[0].text)).ratio()
             hints_list.append({'a_tag': hint_tag, 'rate': resemble_rate})
 
         return sorted(hints_list, key=lambda h: h['rate'], reverse=True)[0] if hints_list else None
@@ -200,7 +179,7 @@ class MagiccardsScraper(object):
         redas_bs = soup.find_all('table')[3].find_all('td')[2].find_all('b')
         # if double sided card
         reda_index = 3 if len(redas_bs) == 5 else 4
-        return uni(redas_bs[reda_index].text.split('(')[1][:-1])
+        return ext.uni(redas_bs[reda_index].text.split('(')[1][:-1])
 
     @staticmethod
     def _get_card_info(soup):
@@ -222,7 +201,7 @@ class MagiccardsScraper(object):
         """
         content_table = magic_soup.find_all('table')[3]
         request_url = content_table.find_all('script')[0]['src']
-        sid = uni(ext.get_query_string_params(request_url)['sid'])
+        sid = ext.uni(ext.get_query_string_params(request_url)['sid'])
 
         tcg_scrapper = TCGPlayerScraper(sid)
         prices = tcg_scrapper.get_brief_info()
@@ -243,7 +222,7 @@ class MagiccardsScraper(object):
         redas = []
         redas_synonyms = MagiccardsScraper._get_redas_synonyms()
         for reda_a in en_reda_table.find_all('a'):
-            name = uni(reda_a.text)
+            name = ext.uni(reda_a.text)
             url = ext.url_join(MagiccardsScraper.MAGICCARDS_BASE_URL, reda_a['href'])
             reda_synonyms = redas_synonyms.get(name, [])
 
@@ -253,13 +232,17 @@ class MagiccardsScraper(object):
 
     @staticmethod
     def _get_redas_synonyms():
+        """
+        Parses redactions csv file with redaction synonyms
+        and returns dict of {redaction:synonyms}
+        """
         synonyms = {}
         with open('redactions', 'r') as rfile:
             reader = csv.DictReader(rfile, delimiter=';')
             for line in reader:
-                key = uni(line['magiccards'])
-                spellshop = uni(line['spellshop'])
-                buymagic = uni(line['buymagic'])
+                key = ext.uni(line['magiccards'])
+                spellshop = ext.uni(line['spellshop'])
+                buymagic = ext.uni(line['buymagic'])
 
                 synonyms[key] = [spellshop, buymagic]
 
@@ -293,11 +276,11 @@ class TCGPlayerScraper(object):
 
         tcg_soup = BeautifulSoup(html_response)
 
-        prices = {'sid': uni(self.sid),
+        prices = {'sid': ext.uni(self.sid),
                   'url': ext.get_domain_with_path(tcg_soup.find('td', class_='TCGPHiLoLink').contents[0]['href']),
-                  'low': uni(tcg_soup.find('td', class_='TCGPHiLoLow').contents[1].contents[0]),
-                  'mid': uni(tcg_soup.find('td', class_='TCGPHiLoMid').contents[1].contents[0]),
-                  'high': uni(tcg_soup.find('td', class_='TCGPHiLoHigh').contents[1].contents[0])}
+                  'low': ext.uni(tcg_soup.find('td', class_='TCGPHiLoLow').contents[1].contents[0]),
+                  'mid': ext.uni(tcg_soup.find('td', class_='TCGPHiLoMid').contents[1].contents[0]),
+                  'high': ext.uni(tcg_soup.find('td', class_='TCGPHiLoHigh').contents[1].contents[0])}
 
         return prices
 
@@ -326,7 +309,7 @@ class SpellShopScraper(object):
 
         for rdiv in redaction_divs:
             reda_tag = rdiv.find('a')
-            name = uni(reda_tag.text)
+            name = ext.uni(reda_tag.text)
             url = ext.url_join(ext.get_domain(SpellShopScraper.BASE_URL), reda_tag['href'])
 
             reda = ext.get_first(redas, lambda r: name in r.names)
@@ -351,7 +334,7 @@ class SpellShopScraper(object):
         cards_table = soup.find('td', class_='td_center')
         cards = []
         if cards_table is not None:
-            cards_divs = filter(lambda d: uni(d.text), cards_table.find_all('div'))
+            cards_divs = filter(lambda d: ext.uni(d.text), cards_table.find_all('div'))
             pool = eventlet.GreenPool(len(cards_divs) if len(cards_divs) < 100 else 100)
             for card in pool.imap(SpellShopScraper._parse_card_shop_info, map(lambda cd: (cd, reda), cards_divs)):
                 if card is not None:
@@ -370,7 +353,7 @@ class SpellShopScraper(object):
         card_tr = card_div.find('tr')
         card_tds = card_tr.find_all('td')
 
-        name = uni(card_tds[1].find('a').text)
+        name = ext.uni(card_tds[1].find('a').text)
         if name.split()[0] in ['mountain', 'swamp', 'island', 'plains']:
             return None
 
@@ -417,7 +400,7 @@ class BuyMagicScraper(object):
         root_div = soup.find_all('div', class_='c1')[1]
         for reda_ul in root_div.find_all('ul')[1:]:
             for reda_tag in reda_ul.find_all('a'):
-                name = uni(reda_tag.text)
+                name = ext.uni(reda_tag.text)
                 url = reda_tag['href']
 
                 reda = ext.get_first(redas, lambda r: name in r.names)
@@ -459,6 +442,11 @@ class BuyMagicScraper(object):
 
     @staticmethod
     def _parse_cards_at_page(args):
+        """Parses cards that found at current page
+
+        :param args: tuple of (page url, models.Redaction)
+        :return: list of models.Card or None
+        """
         page_url, reda = args
         page = openurl(page_url)
         page = page \
@@ -484,22 +472,21 @@ class BuyMagicScraper(object):
         """Parses card shop info and find this card at www.magiccard.info
 
         :param args: tuple of (soup tag with card info, models.Redaction)
-        :return: models.Card
+        :return: models.Card or None
         """
-
         card_div, reda = args
         inner_div = card_div.find('div')
         if inner_div is not None:
             card_div = inner_div
 
         header_tag = card_div.find('a')
-        url = uni(header_tag['href'])
-        name = uni(header_tag.text)
+        url = ext.uni(header_tag['href'])
+        name = ext.uni(header_tag.text)
 
         price_table = card_div.find('table')
         price_row = price_table.find('tr').find_all('td')
         type = 'common'
-        price = ext.uah_to_dollar(uni(price_row[1].text))
+        price = ext.uah_to_dollar(ext.uni(price_row[1].text))
         number = len(price_row[2].find_all('option'))
 
         card = db.get_card(name, reda.name)
