@@ -41,6 +41,8 @@ def get_cards(shops=None, redas=None, skip=None, limit=None):
 
     :param shops: list of shops in which cards will be searched, list of strings
     :param redas: list of redaction for which cards will be searched, list of strings
+    :param skip: number of cards that will be skipped
+    :param limit: number of cards in result list
     :return: list of models.Card
     """
     connection = pymongo.MongoClient(MONGO_URL)
@@ -53,6 +55,25 @@ def get_cards(shops=None, redas=None, skip=None, limit=None):
         selector['redaction'] = {'$in': redas}
 
     return [tocard(card_dict) for card_dict in db.cards.find(selector).skip(skip).limit(limit)]
+
+
+def get_cards_count(shops=None, redas=None):
+    """Returns number of cards in db
+
+    :param shops: list of shops in which cards will be searched, list of strings
+    :param redas: list of redaction for which cards will be searched, list of strings
+    :return: int
+    """
+    connection = pymongo.MongoClient(MONGO_URL)
+    db = connection[DB]
+
+    selector = {}
+    if shops:
+        selector['shops.name'] = {'$in': shops}
+    if redas:
+        selector['redaction'] = {'$in': redas}
+
+    return db.cards.find(selector).count()
 
 
 def save_redas(redas):

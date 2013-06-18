@@ -1,4 +1,5 @@
 import random
+from flask import request, url_for
 from werkzeug.routing import BaseConverter
 
 
@@ -76,6 +77,15 @@ def shops(shops, shop_name):
     return filter(lambda f: f.name == shop_name, shops)
 
 
+def url_for_page(page):
+    """
+    Creates url for specific page
+    """
+    args = request.view_args.copy()
+    args['page'] = page
+    return url_for(request.endpoint, **args)
+
+
 class RegexConverter(BaseConverter):
     def __init__(self, url_map, *items):
         super(RegexConverter, self).__init__(url_map)
@@ -89,4 +99,5 @@ def register(app):
     app.add_template_filter(price)
     app.add_template_filter(price_float)
     app.add_template_filter(shops)
+    app.add_template_filter(url_for_page)
     app.url_map.converters['regex'] = RegexConverter
