@@ -49,6 +49,10 @@ class CardPrices(object):
         self.mid = mid
         self.high = high
 
+    @property
+    def avg(self):
+        return (self.low * 1. + self.mid * 2.5 + self.high * .5) / 4
+
     def __repr__(self):
         return "%s: l[%s] m[%s] h[%s]" % (self.url, self.low, self.mid, self.high)
 

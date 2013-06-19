@@ -9,14 +9,12 @@
                 <th rowspan="2">name</th>
                 <th rowspan="2">type</th>
                 <th rowspan="2">redaction</th>
-                <th colspan="4">tcg</th>
+                <th colspan="1">tcg</th>
                 <th colspan="1">{{ shop }}</th>
+                <th rowspan="2">diff</th>
             </tr>
             <tr>
-                <th>url</th>
-                <th>low</th>
-                <th>mid</th>
-                <th>high</th>
+                <th>avg price</th>
                 <th>price</th>
             </tr>
             </thead>
@@ -27,11 +25,9 @@
                     <td class="text-middle"><strong><a href="{{ card.info.url }}">{{ card.name }}</a></strong></td>
                     <td class="text-center text-middle">{{ card.type }}</td>
                     <td class="text-center text-middle">{{ card.redaction }}</td>
-                    <td class="text-center text-middle"><a href="{{ card.prices.url }}">link</a></td>
-                    <td class="text-center text-middle">${{ '%0.2f'|format(card|price('low')) }}</td>
-                    <td class="text-center text-middle">${{ '%0.2f'|format(card|price('mid')) }}</td>
-                    <td class="text-center text-middle">${{ '%0.2f'|format(card|price('high')) }}</td>
-                    <td class="text-center text-middle"><a href="{{ shop_offer.url }}">{{ shop_offer.price }}</a></td>
+                    <td class="text-center text-middle"><a href="{{ card.prices.url }}">${{ '%0.2f'|format(card.prices.avg) }}</a></td>
+                    <td class="text-center text-middle"><a href="{{ shop_offer.url }}">{{ '%0.2f'|format(shop_offer.price) }}</a></td>
+                    <td class="text-center text-middle">{{ '%0.2f'|format(card.prices.avg*100/shop_offer.price) }}%</td>
                 </tr>
             {% endfor %}
             </tbody>
