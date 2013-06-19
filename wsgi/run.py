@@ -38,11 +38,10 @@ def shop(shop, reda, page):
     if shop not in [sh.SHOP_NAME for sh in all_shops]:
         shop = all_shops[0].SHOP_NAME
 
-    shops = [shop]
-    redas = filter(lambda r: all([shop in r.shops for shop in shops]), db.get_redas())
-    cards = db.get_cards(shops=shops, redas=None if reda == 'all' else [reda],
+    redas = filter(lambda r: shop in r.shops, db.get_redas())
+    cards = db.get_cards(shop=shop, redas=None if reda == 'all' else [reda],
                          skip=(page - 1) * cards_per_page, limit=cards_per_page)
-    count = db.get_cards_count(shops=shops, redas=None if reda == 'all' else [reda])
+    count = db.get_cards_count(shop=shop, redas=None if reda == 'all' else [reda])
 
     return render_template('shop.html', shop=shop, active_reda=reda, redas=redas, cards=cards,
                            pagination=models.Pagination(page, cards_per_page, count))

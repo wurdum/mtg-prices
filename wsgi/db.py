@@ -17,7 +17,10 @@ def save_cards(cards):
         card_selector = {'name': card.name, 'redaction': card.redaction}
         dbcard = db.cards.find_one(card_selector)
         if dbcard is not None:
-            card.shops += filter(lambda s: s not in card.shops, tocard(dbcard).shops)
+            for k, v in tocard(dbcard).shops.items():
+                if k not in card.shops:
+                    card.shops[k] = v
+
             db.cards.update(card_selector, {'$set': {'shops': todict(card.shops)}})
         else:
             db.cards.insert(todict(card))
@@ -36,10 +39,10 @@ def get_card(name, reda):
     return tocard(dbcard) if dbcard is not None else None
 
 
-def get_cards(shops=None, redas=None, skip=None, limit=None):
+def get_cards(shop, redas=None, skip=None, limit=None):
     """Returns all cards from db as list of models.Card
 
-    :param shops: list of shops in which cards will be searched, list of strings
+    :param shop: shop name
     :param redas: list of redaction for which cards will be searched, list of strings
     :param skip: number of cards that will be skipped
     :param limit: number of cards in result list
@@ -48,19 +51,19 @@ def get_cards(shops=None, redas=None, skip=None, limit=None):
     connection = pymongo.MongoClient(MONGO_URL)
     db = connection[DB]
 
-    selector = {}
-    if shops:
-        selector['shops.name'] = {'$in': shops}
+    selector = {'shops.' + shop: {'$exists': 1}}
     if redas:
         selector['redaction'] = {'$in': redas}
 
-    return [tocard(card_dict) for card_dict in db.cards.find(selector).skip(skip).limit(limit)]
+    sort = [['shops.' + shop + '.overpay', pymongo.DESCENDING]]
+
+    return [tocard(card_dict) for card_dict in db.cards.find(selector).sort(sort).skip(skip).limit(limit)]
 
 
-def get_cards_count(shops=None, redas=None):
+def get_cards_count(shop=None, redas=None):
     """Returns number of cards in db
 
-    :param shops: list of shops in which cards will be searched, list of strings
+    :param shop: shop name
     :param redas: list of redaction for which cards will be searched, list of strings
     :return: int
     """
@@ -68,8 +71,8 @@ def get_cards_count(shops=None, redas=None):
     db = connection[DB]
 
     selector = {}
-    if shops:
-        selector['shops.name'] = {'$in': shops}
+    if shop:
+        selector['shops.' + shop] = {'$exists': 1}
     if redas:
         selector['redaction'] = {'$in': redas}
 
@@ -108,7 +111,7 @@ def tocard(dict_card):
     """
     info = models.CardInfo(**dict_card['info']) if 'info' in dict_card and dict_card['info'] else None
     prices = models.CardPrices(**dict_card['prices']) if 'prices' in dict_card and dict_card['prices'] else None
-    shops = [models.Shop(**shop_dict) for shop_dict in dict_card['shops']]
+    shops = dict([(k, models.Shop(**v)) for k, v in dict_card['shops'].items()])
     return models.Card(dict_card['name'], dict_card['redaction'], dict_card['type'],
                        info=info, prices=prices, shops=shops)
 

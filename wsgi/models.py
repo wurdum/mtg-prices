@@ -12,7 +12,7 @@ class Card(object):
         self.type = type
         self.prices = prices
         self.info = info
-        self.shops = shops if shops else []
+        self.shops = shops if shops else {}
 
     def __hash__(self):
         return hash((self.name, self.redaction))
@@ -62,10 +62,11 @@ class Shop(object):
     Represents shop offer for some card
     """
 
-    def __init__(self, name, url, price, number, type='common'):
+    def __init__(self, name, url, price, overpay, number, type='common'):
         self.name = name
         self.url = url
         self.price = price
+        self.overpay = overpay
         self.number = number
         self.type = type
 

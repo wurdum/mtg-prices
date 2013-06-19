@@ -368,9 +368,8 @@ class SpellShopScraper(object):
         if card is None:
             return None
 
-        card_shops = [shop for shop in card.shops if shop.name != SpellShopScraper.SHOP_NAME]
-        card_shops.append(models.Shop(SpellShopScraper.SHOP_NAME, url, price, number))
-        card.shops = card_shops
+        card.shops[SpellShopScraper.SHOP_NAME] = \
+            models.Shop(SpellShopScraper.SHOP_NAME, url, price, card.prices.avg / price, number)
 
         return card
 
@@ -496,8 +495,7 @@ class BuyMagicScraper(object):
         if card is None:
             return None
 
-        card_shops = [shop for shop in card.shops if shop.name != BuyMagicScraper.SHOP_NAME]
-        card_shops.append(models.Shop(BuyMagicScraper.SHOP_NAME, url, price, number, type=type))
-        card.shops = card_shops
+        card.shops[BuyMagicScraper.SHOP_NAME] = \
+            models.Shop(BuyMagicScraper.SHOP_NAME, url, price, card.prices.avg / price, number, type=type)
 
         return card
