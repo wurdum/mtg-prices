@@ -3,8 +3,8 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__) or '.')
-PY_VERSION = 'python-' + ('.'.join(map(str, sys.version_info[:2])))
-PY_DIR = os.environ['HOME'] + '/' + PY_VERSION
+PY_VERSION = '.'.join(map(str, sys.version_info[:2]))
+PY_DIR = os.environ['HOME'] + '/python'
 
 
 virtenv = PY_DIR + '/virtenv/'
