@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 {% block content %}
-    <p>
+    {#<p>
         <a class="btn btn-info pull-right" href="{{ url_for('shop_update', shop=shop, reda=active_reda) }}">Update</a>
         <span class="clearfix"></span>
-    </p>
+    </p>#}
     <div class="well well-small redas-menu pull-left">
         <ul class="nav nav-list">
             <li class="{{ active_reda|active_if('all') }}"><a href="{{ url_for('shop', shop=shop) }}"><i class="icon-home"></i> all</a></li>

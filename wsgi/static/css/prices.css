@@ -53,6 +53,10 @@ body {
     vertical-align: middle;
 }
 
+div.text-middle {
+    padding: 5px 0;
+}
+
 .relative-container {
     position: relative;
 }

@@ -14,7 +14,10 @@ cards_per_page = 40
 
 @app.route('/')
 def index():
-    return render_template('base.html')
+    cards_at_page = 18
+    cards_spellshop = db.get_cards(shop=scrapers.SpellShopScraper.SHOP_NAME, limit=cards_at_page)
+    cards_buymagic = db.get_cards(shop=scrapers.BuyMagicScraper.SHOP_NAME, limit=cards_at_page)
+    return render_template('index.html', cards_spellshop=cards_spellshop, cards_buymagic=cards_buymagic)
 
 
 @app.route('/redactions')

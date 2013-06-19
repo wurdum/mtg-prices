@@ -39,7 +39,7 @@ def get_card(name, reda):
     return tocard(dbcard) if dbcard is not None else None
 
 
-def get_cards(shop, redas=None, skip=None, limit=None):
+def get_cards(shop, redas=None, skip=0, limit=40):
     """Returns all cards from db as list of models.Card
 
     :param shop: shop name
