@@ -335,6 +335,9 @@ class SpellShopScraper(object):
         cards = []
         if cards_table is not None:
             cards_divs = filter(lambda d: ext.uni(d.text), cards_table.find_all('div'))
+            if len(cards_divs) == 0:
+                return cards
+
             pool = eventlet.GreenPool(len(cards_divs) if len(cards_divs) < 100 else 100)
             for card in pool.imap(SpellShopScraper._parse_card_shop_info, map(lambda cd: (cd, reda), cards_divs)):
                 if card is not None:

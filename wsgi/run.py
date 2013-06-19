@@ -32,8 +32,8 @@ def redactions_update():
 
 
 @app.route('/<regex("(' + all_shops_route + ')"):shop>', defaults={'reda': 'all', 'page': 1}, methods=['GET'])
-@app.route('/<regex("(' + all_shops_route + ')"):shop>/<reda>', defaults={'page': 1}, methods=['GET'])
-@app.route('/<regex("(' + all_shops_route + ')"):shop>/<reda>/<int:page>', methods=['GET'])
+@app.route('/<regex("(' + all_shops_route + ')"):shop>/<regex("((?!update).*)"):reda>', defaults={'page': 1}, methods=['GET'])
+@app.route('/<regex("(' + all_shops_route + ')"):shop>/<regex("((?!update).*)"):reda>/<int:page>', methods=['GET'])
 def shop(shop, reda, page):
     if shop not in [sh.SHOP_NAME for sh in all_shops]:
         shop = all_shops[0].SHOP_NAME
