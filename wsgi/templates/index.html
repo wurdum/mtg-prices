@@ -25,7 +25,7 @@
                 {% set shop_offer = card.shops['spellshop'] %}
                 <td class="text-middle"><strong><a href="{{ card.info.url }}">{{ card.name }}</a></strong></td>
                 <td class="text-center text-middle"><a href="{{ card.prices.url }}">${{ '%0.2f'|format(card.prices.avg) }}</a></td>
-                <td class="text-center text-middle"><a href="{{ shop_offer.url }}">{{ '%0.2f'|format(shop_offer.price) }}</a></td>
+                <td class="text-center text-middle"><a href="{{ shop_offer.url }}">${{ '%0.2f'|format(shop_offer.price) }}</a></td>
                 <td class="text-center text-middle">{{ '%0.2f'|format(shop_offer.overpay*100) }}%</td>
             </tr>
         {% endfor %}
@@ -50,7 +50,7 @@
                 {% set shop_offer = card.shops['buymagic'] %}
                 <td class="text-middle"><strong><a href="{{ card.info.url }}">{{ card.name }}</a></strong></td>
                 <td class="text-center text-middle"><a href="{{ card.prices.url }}">${{ '%0.2f'|format(card.prices.avg) }}</a></td>
-                <td class="text-center text-middle"><a href="{{ shop_offer.url }}">{{ '%0.2f'|format(shop_offer.price) }}</a></td>
+                <td class="text-center text-middle"><a href="{{ shop_offer.url }}">${{ '%0.2f'|format(shop_offer.price) }}</a></td>
                 <td class="text-center text-middle">{{ '%0.2f'|format(shop_offer.overpay*100) }}%</td>
             </tr>
         {% endfor %}

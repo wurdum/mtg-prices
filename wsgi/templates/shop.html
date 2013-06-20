@@ -26,7 +26,7 @@
                     <td class="text-center text-middle">{{ card.type }}</td>
                     <td class="text-center text-middle">{{ card.redaction }}</td>
                     <td class="text-center text-middle"><a href="{{ card.prices.url }}">${{ '%0.2f'|format(card.prices.avg) }}</a></td>
-                    <td class="text-center text-middle"><a href="{{ shop_offer.url }}">{{ '%0.2f'|format(shop_offer.price) }}</a></td>
+                    <td class="text-center text-middle"><a href="{{ shop_offer.url }}">${{ '%0.2f'|format(shop_offer.price) }}</a></td>
                     <td class="text-center text-middle">{{ '%0.2f'|format(shop_offer.overpay*100) }}%</td>
                 </tr>
             {% endfor %}
