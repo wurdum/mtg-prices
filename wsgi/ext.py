@@ -1,14 +1,6 @@
 # coding=utf-8
-import random
 import re
-import string
-import cStringIO
-import itertools
 import urlparse
-
-
-def get_token(size=6, chars=string.ascii_lowercase + string.digits):
-    return ''.join(random.choice(chars) for x in range(size))
 
 
 def uni(value):
@@ -57,19 +49,6 @@ def get_first(iterable, func, default=None):
     return default
 
 
-def result_or_default(func, default=None, prevent_empty=False):
-    """Returns result of func execution or default value
-
-    :param func: function to execute
-    :return: result of func ot default value
-    """
-    try:
-        result = func()
-        return result if not prevent_empty or result else default
-    except:
-        return default
-
-
 def get_domain(url):
     """
     Returns hostname with scheme
@@ -100,48 +79,13 @@ def url_join(base, url):
     return urlparse.urljoin(base, url)
 
 
-def parse_card(line):
-    """parse_card(line) -> (string, string)
+def price_to_float(string):
+    """Converts string price to float repr, if price is 0 returns 0.01
 
-    Parses input line to find card name and cards number.
-    If no cards number found, returns 1.
-
-    :param line: input string
-    :return: dict {card name, cards number}
+    :param string: price string repr
+    :return: price as float
     """
+    if isinstance(string, float):
+        return string
 
-    length = len(line)
-    number = ''
-
-    current_pos = length - 1
-    while line[current_pos].isdigit():
-        number = line[current_pos] + number
-        current_pos -= 1
-
-    if not number:
-        number = '1'
-
-    name = line[:current_pos].strip(' \t\r;')
-
-    return {'name': name, 'number': int(number)}
-
-
-def read_file(stream):
-    """read_file(stream) -> list of (string, string)
-
-    Parses input stream and returns list of cards names and cards numbers
-
-    :return: list of tuples (card name, card number)
-    """
-
-    if isinstance(stream, cStringIO.OutputType):
-        full_content = stream.getvalue()
-        stripped_lines = [l.strip(' \t\r') for l in full_content.split('\n')]
-        cards = [parse_card(card) for card in stripped_lines if card]
-
-        unique_cards = [(key, sum([c['number'] for c in value]))
-                        for key, value in itertools.groupby(cards, key=lambda c: c['name'])]
-
-        return unique_cards
-
-    raise IOError('unknown input stream format encountered, type: %s' % type(stream))
+    return float(string[1:]) if float(string[1:]) > 0 else 0.01

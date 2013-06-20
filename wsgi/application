@@ -6,7 +6,6 @@ sys.path.insert(0, os.path.dirname(__file__) or '.')
 PY_VERSION = '.'.join(map(str, sys.version_info[:2]))
 PY_DIR = os.environ['HOME'] + '/python'
 
-
 virtenv = PY_DIR + '/virtenv/'
 
 PY_CACHE = virtenv + 'lib/' + PY_VERSION + '/site-packages'
@@ -20,4 +19,3 @@ except IOError:
     pass
 
 from run import app as application
-

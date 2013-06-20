@@ -1,15 +1,14 @@
 # coding=utf-8
 import gzip
-from StringIO import StringIO
-import eventlet
 import csv
+import eventlet
 import difflib
+from StringIO import StringIO
 from eventlet.green import urllib2
 from bs4 import BeautifulSoup, Tag
 import models
 import ext
 import db
-import filters
 
 
 def get_redactions():
@@ -275,9 +274,9 @@ class TCGPlayerScraper(object):
 
         prices = {'sid': ext.uni(self.sid),
                   'url': ext.get_domain_with_path(tcg_soup.find('td', class_='TCGPHiLoLink').contents[0]['href']),
-                  'low': filters.price_to_float(ext.uni(tcg_soup.find('td', class_='TCGPHiLoLow').contents[1].contents[0])),
-                  'mid': filters.price_to_float(ext.uni(tcg_soup.find('td', class_='TCGPHiLoMid').contents[1].contents[0])),
-                  'high': filters.price_to_float(ext.uni(tcg_soup.find('td', class_='TCGPHiLoHigh').contents[1].contents[0]))}
+                  'low': ext.price_to_float(ext.uni(tcg_soup.find('td', class_='TCGPHiLoLow').contents[1].contents[0])),
+                  'mid': ext.price_to_float(ext.uni(tcg_soup.find('td', class_='TCGPHiLoMid').contents[1].contents[0])),
+                  'high': ext.price_to_float(ext.uni(tcg_soup.find('td', class_='TCGPHiLoHigh').contents[1].contents[0]))}
 
         return prices
 
@@ -358,7 +357,7 @@ class SpellShopScraper(object):
             return None
 
         url = ext.url_join(ext.get_domain(SpellShopScraper.BASE_URL), card_tds[1].find('a')['href'])
-        price = filters.price_to_float(ext.uah_to_dollar(card_tds[4].text))
+        price = ext.price_to_float(ext.uah_to_dollar(card_tds[4].text))
         number = len(card_tds[5].find_all('option'))
 
         card = db.get_card(name, reda.name)
@@ -485,7 +484,7 @@ class BuyMagicScraper(object):
         price_table = card_div.find('table')
         price_row = price_table.find('tr').find_all('td')
         type = 'common'
-        price = filters.price_to_float(ext.uah_to_dollar(ext.uni(price_row[1].text)))
+        price = ext.price_to_float(ext.uah_to_dollar(ext.uni(price_row[1].text)))
         number = len(price_row[2].find_all('option'))
 
         card = db.get_card(name, reda.name)

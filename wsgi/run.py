@@ -56,13 +56,11 @@ def shop_update(shop, reda):
     if shop not in [sh.SHOP_NAME for sh in all_shops]:
         shop = all_shops[0].SHOP_NAME
 
-    redas = filter(lambda r: shop in r.shops,
-                   db.get_redas() if reda == 'all' else db.get_redas(name=reda))
+    redas = filter(lambda r: shop in r.shops, db.get_redas() if reda == 'all' else db.get_redas(name=reda))
 
     for r in redas:
         cards = [sh for sh in all_shops if sh.SHOP_NAME == shop][0].get_cards(r)
         db.save_cards(cards)
-        print r.name, len(cards)
 
     return redirect(url_for('shop', shop=shop, reda=reda))
 
